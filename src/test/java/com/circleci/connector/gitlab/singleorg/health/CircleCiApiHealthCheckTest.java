@@ -1,4 +1,4 @@
-package com.circleci.gitlab_single_org_connector.health;
+package com.circleci.connector.gitlab.singleorg.health;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

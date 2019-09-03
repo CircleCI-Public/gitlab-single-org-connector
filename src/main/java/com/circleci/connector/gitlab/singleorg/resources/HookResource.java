@@ -1,7 +1,7 @@
-package com.circleci.gitlab_single_org_connector.resources;
+package com.circleci.connector.gitlab.singleorg.resources;
 
-import com.circleci.gitlab_single_org_connector.api.HookResponse;
-import com.circleci.gitlab_single_org_connector.api.PushHook;
+import com.circleci.connector.gitlab.singleorg.api.HookResponse;
+import com.circleci.connector.gitlab.singleorg.api.PushHook;
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;

@@ -1,7 +1,7 @@
-package com.circleci.gitlab_single_org_connector;
+package com.circleci.connector.gitlab.singleorg;
 
-import com.circleci.gitlab_single_org_connector.health.CircleCiApiHealthCheck;
-import com.circleci.gitlab_single_org_connector.resources.HookResource;
+import com.circleci.connector.gitlab.singleorg.health.CircleCiApiHealthCheck;
+import com.circleci.connector.gitlab.singleorg.resources.HookResource;
 import com.codahale.metrics.MetricRegistry;
 import com.readytalk.metrics.StatsDReporter;
 import io.dropwizard.Application;

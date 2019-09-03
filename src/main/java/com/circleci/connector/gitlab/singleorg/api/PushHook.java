@@ -1,4 +1,4 @@
-package com.circleci.gitlab_single_org_connector.api;
+package com.circleci.connector.gitlab.singleorg.api;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
