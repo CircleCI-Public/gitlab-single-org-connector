@@ -1,27 +1,32 @@
 package com.circleci.gitlab_single_org_connector.api;
 
+import com.circleci.gitlab_single_org_connector.resources.HookResource;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.UUID;
 
-/**
- * For responses to the /hook endpoint as implemented by {@link
- * com.circleci.gitlab_single_org_connector.resources.HookResource}.
- */
+/** For responses to the /hooks/* endpoints as implemented by {@link HookResource}. */
 public class HookResponse {
-  /** Any errors produced during hook processing will end up here. */
-  private final List<String> errors;
-
-  public HookResponse() {
-    this(new ArrayList<String>());
+  public enum Status {
+    SUBMITTED,
+    IGNORED
   }
 
-  public HookResponse(List<String> hookErrors) {
-    errors = hookErrors;
+  private final UUID id;
+
+  private final Status status;
+
+  public HookResponse(UUID hookId, Status s) {
+    id = hookId;
+    status = s;
   }
 
   @JsonProperty
-  public List<String> getErrors() {
-    return errors;
+  public UUID getId() {
+    return id;
+  }
+
+  @JsonProperty
+  public Status getStatus() {
+    return status;
   }
 }
