@@ -6,6 +6,7 @@ import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
 import java.util.UUID;
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
@@ -18,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Consume all hook types. */
-@Path("/hooks")
+@Path("/hook")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class HookResource {
@@ -40,15 +41,28 @@ public class HookResource {
     this.gitLabToken = gitLabToken;
   }
 
-  /** Consume push hooks. */
+  /** Consume all hooks. */
   @POST
   @Timed
-  @Path("/push")
-  public HookResponse processHook(String body, @HeaderParam("X-Gitlab-Token") String token)
+  public HookResponse processHook(
+      String body,
+      @HeaderParam("X-Gitlab-Event") String type,
+      @HeaderParam("X-Gitlab-Token") String token)
       throws Exception {
-    LOGGER.debug("Push hook raw body: {}", body);
+    LOGGER.debug("Received hook type \"{}\" raw body: {}", type, body);
     maybeValidateGitLabToken(token);
 
+    if ("Push Hook".equals(type)) {
+      return processPushHook(body);
+    } else if (type != null) {
+      return new HookResponse(UUID.randomUUID(), HookResponse.Status.IGNORED);
+    } else {
+      throw new BadRequestException("Expected X-Gitlab-Event header");
+    }
+  }
+
+  /** Consume push hooks. */
+  private HookResponse processPushHook(String body) throws Exception {
     PushHook hook = MAPPER.readValue(body, PushHook.class);
     hook.setId(UUID.randomUUID());
     LOGGER.info("Received a hook: {}", hook);
