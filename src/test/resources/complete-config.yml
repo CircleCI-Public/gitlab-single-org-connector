@@ -1,0 +1,8 @@
+---
+
+gitlab:
+  sharedSecretForHooks: "super-secret"
+statsd:
+  host: "localhost"
+  port: 123
+  refreshPeriodSeconds: 3
