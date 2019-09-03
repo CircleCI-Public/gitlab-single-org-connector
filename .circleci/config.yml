@@ -5,9 +5,6 @@ version: "2.1"
 orbs:
   maven:
     executors:
-      java-8:
-        docker:
-          - image: circleci/openjdk:8-jdk
       java-11:
         docker:
           - image: circleci/openjdk:11-jdk
@@ -32,20 +29,16 @@ workflows:
   ci:
     jobs:
       - lint
-      - ensure-java-11-compat:
-          requires:
-            - lint
       - package:
           requires:
             - lint
       - containerize:
           requires:
-            - ensure-java-11-compat
             - package
 
 jobs:
   lint:
-    executor: maven/java-8
+    executor: maven/java-11
     steps:
       - checkout
       - maven/with_cache:
@@ -58,17 +51,8 @@ jobs:
               git status
               exit 1
             fi
-  ensure-java-11-compat:
-    executor: maven/java-11
-    steps:
-      - checkout
-      - maven/with_cache:
-          steps:
-            - run: mvn test
-      - store_test_results:
-          path: target/surefire-reports
   package:
-    executor: maven/java-8
+    executor: maven/java-11
     steps:
       - checkout
       - maven/with_cache:
@@ -95,7 +79,7 @@ jobs:
           paths:
             - "*.jar"
   containerize:
-    executor: maven/java-8
+    executor: maven/java-11
     steps:
       - checkout
       - attach_workspace:
