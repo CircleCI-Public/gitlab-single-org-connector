@@ -11,4 +11,5 @@ RUN useradd --groups users \
 USER service-user
 EXPOSE 8080
 EXPOSE 8081
-ENTRYPOINT ["java", "-jar", "/service.jar", "server"]
+ENTRYPOINT ["java", "-jar", "/service.jar"]
+CMD ["server"]
