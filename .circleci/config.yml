@@ -74,6 +74,15 @@ jobs:
       - maven/with_cache:
           steps:
             - run: mvn package -Dcircleci.build.number=${CIRCLE_BUILD_NUM}
+      - run:
+          name: Run the service check command
+          command: |
+            java -jar target/gitlab-single-org-connector*.jar check
+      - run:
+          name: Run the service check command with a config
+          command: |
+            java -jar target/gitlab-single-org-connector*.jar \
+                 check src/test/resources/complete-config.yml
       - store_test_results:
           path: target/surefire-reports
       - store_artifacts:
@@ -93,11 +102,20 @@ jobs:
           at: target
       - setup_remote_docker
       - run:
+          name: Compute the docker tag
+          command: |
+            ls target/gitlab-single-org-connector-*.jar | \
+              sed -e 's,^.*-,circleci/gitlab-single-org-connector:,' \
+                  -e 's,.jar$,,' | \
+              uniq > docker.tag
+      - run:
           name: Build Docker container
           command: |
-            JAR=$(ls target/gitlab-single-org-connector-*.jar)
-            VERSION=$(echo "${JAR}" | sed -e 's,^.*-,,' -e 's,.jar$,,' | uniq)
             docker build \
-              --build-arg JAR="${JAR}" \
-              --tag "circleci/gitlab-single-org-connector:${VERSION}" \
+              --build-arg JAR=target/gitlab-single-org-connector*.jar \
+              --tag "$(cat docker.tag)" \
               .
+      - run:
+          name: Run service check command in container
+          command: |
+            docker run -it --rm "$(cat docker.tag)" check
