@@ -1,11 +1,11 @@
-package com.circleci.gitlab_single_org_connector;
+package com.circleci.connector.gitlab.singleorg;
 
 import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.circleci.gitlab_single_org_connector.resources.HookResource;
+import com.circleci.connector.gitlab.singleorg.resources.HookResource;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;

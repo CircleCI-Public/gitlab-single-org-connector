@@ -1,4 +1,4 @@
-package com.circleci.gitlab_single_org_connector;
+package com.circleci.connector.gitlab.singleorg;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;

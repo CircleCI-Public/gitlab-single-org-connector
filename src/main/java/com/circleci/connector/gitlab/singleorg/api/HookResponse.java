@@ -1,6 +1,6 @@
-package com.circleci.gitlab_single_org_connector.api;
+package com.circleci.connector.gitlab.singleorg.api;
 
-import com.circleci.gitlab_single_org_connector.resources.HookResource;
+import com.circleci.connector.gitlab.singleorg.resources.HookResource;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
 

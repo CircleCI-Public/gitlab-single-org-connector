@@ -1,8 +1,8 @@
-package com.circleci.gitlab_single_org_connector.resources;
+package com.circleci.connector.gitlab.singleorg.resources;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.circleci.gitlab_single_org_connector.api.HookResponse;
+import com.circleci.connector.gitlab.singleorg.api.HookResponse;
 import io.dropwizard.testing.FixtureHelpers;
 import javax.ws.rs.WebApplicationException;
 import org.junit.jupiter.api.Test;
