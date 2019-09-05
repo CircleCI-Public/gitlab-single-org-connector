@@ -67,6 +67,14 @@ jobs:
           command: |
             java -jar target/gitlab-single-org-connector*.jar \
                  check src/test/resources/complete-config.yml
+      - run:
+          name: Save the version
+          command: |
+            mvn help:evaluate \
+              -Dexpression=project.version \
+              -q \
+              -DforceStdout > target/version
+            echo ".${CIRCLE_BUILD_NUM}" >> target/version
       - store_test_results:
           path: target/surefire-reports
       - store_artifacts:
@@ -78,6 +86,7 @@ jobs:
           root: target
           paths:
             - "*.jar"
+            - version
   containerize:
     executor: maven/java-11
     steps:
@@ -88,10 +97,10 @@ jobs:
       - run:
           name: Compute the docker tag
           command: |
-            ls target/gitlab-single-org-connector-*.jar | \
-              sed -e 's,^.*-,circleci/gitlab-single-org-connector:,' \
-                  -e 's,.jar$,,' | \
-              uniq > docker.tag
+            (
+              echo -n 'circleci/gitlab-single-org-connector:'
+              cat target/version
+            ) > docker.tag
       - run:
           name: Build Docker container
           command: |
