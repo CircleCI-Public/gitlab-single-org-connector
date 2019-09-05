@@ -98,9 +98,16 @@ jobs:
           name: Compute the docker tag
           command: |
             (
+              echo -n 'docker.pkg.github.com/'
               echo -n 'circleci/gitlab-single-org-connector:'
               cat target/version
             ) > docker.tag
+      - run:
+          name: Authenticate with GitHub package registry
+          command: |
+            docker login docker.pkg.github.com \
+              -u $GITHUB_PACKAGE_USERNAME \
+              -p $GITHUB_PACKAGE_PASSWORD
       - run:
           name: Build Docker container
           command: |
@@ -112,3 +119,9 @@ jobs:
           name: Run service check command in container
           command: |
             docker run -it --rm "$(cat docker.tag)" check
+      - run:
+          name: Push container if we're on master
+          command: |
+            if [ "${CIRCLE_BRANCH}" = "master" ]; then
+              docker push "$(cat docker.tag)"
+            fi
