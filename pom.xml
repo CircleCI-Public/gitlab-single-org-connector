@@ -11,8 +11,6 @@
     <circleci.build.number>0-SNAPSHOT</circleci.build.number>
     <dropwizard.version>2.0.0-rc9</dropwizard.version>
     <junit.version>5.5.1</junit.version>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
     <metrics.statsd.version>4.2.0</metrics.statsd.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -71,8 +69,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.1</version>
         <configuration>
-          <source>${maven.compiler.source}</source>
-          <target>${maven.compiler.target}</target>
+          <release>11</release>
         </configuration>
       </plugin>
       <plugin>
