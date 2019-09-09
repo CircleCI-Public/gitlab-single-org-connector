@@ -33,6 +33,7 @@ workflows:
           requires:
             - lint
       - containerize:
+          context: org-global
           requires:
             - package
 
@@ -98,17 +99,15 @@ jobs:
           name: Compute the docker tag
           command: |
             (
-              echo -n 'docker.pkg.github.com/'
-              echo -n 'circleci/gitlab-single-org-connector/'
-              echo -n 'gitlab-single-org-connector:'
+              echo -n 'circleci/gitlab-single-org-connector:'
               cat target/version
             ) > docker.tag
       - run:
-          name: Authenticate with GitHub package registry
+          name: Authenticate with Docker Hub
           command: |
-            docker login docker.pkg.github.com \
-              -u $GITHUB_PACKAGE_USERNAME \
-              -p $GITHUB_PACKAGE_PASSWORD
+            docker login \
+              --username "${DOCKER_HUB_USER}" \
+              --password "${DOCKER_HUB_PASSWORD}"
       - run:
           name: Build Docker container
           command: |
