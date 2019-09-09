@@ -99,7 +99,8 @@ jobs:
           command: |
             (
               echo -n 'docker.pkg.github.com/'
-              echo -n 'circleci/gitlab-single-org-connector:'
+              echo -n 'circleci/gitlab-single-org-connector/'
+              echo -n 'gitlab-single-org-connector:'
               cat target/version
             ) > docker.tag
       - run:
