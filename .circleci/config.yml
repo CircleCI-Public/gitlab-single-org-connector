@@ -67,6 +67,8 @@ jobs:
           name: Run the service check command with a config
           command: |
             java -jar target/gitlab-single-org-connector*.jar \
+                 check src/main/resources/default-container-config.yml
+            java -jar target/gitlab-single-org-connector*.jar \
                  check src/test/resources/complete-config.yml
       - run:
           name: Save the version
@@ -114,6 +116,7 @@ jobs:
           command: |
             docker build \
               --build-arg JAR=target/gitlab-single-org-connector*.jar \
+              --build-arg DEFAULT_CONFIG=src/main/resources/default-container-config.yml \
               --tag "$(cat docker.tag)" \
               .
       - run:

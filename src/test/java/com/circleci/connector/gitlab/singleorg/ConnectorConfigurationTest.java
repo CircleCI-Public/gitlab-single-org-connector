@@ -3,10 +3,11 @@ package com.circleci.connector.gitlab.singleorg;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.dropwizard.configuration.FileConfigurationSourceProvider;
+import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
-import io.dropwizard.testing.FixtureHelpers;
+import io.dropwizard.jersey.validation.Validators;
+import io.dropwizard.util.Resources;
 import org.junit.jupiter.api.Test;
 
 class ConnectorConfigurationTest {
@@ -19,10 +20,27 @@ class ConnectorConfigurationTest {
 
   @Test
   void weCanSetEverythingInAConfigFileAndItStillWorks() throws Exception {
-    ObjectMapper mapper = Jackson.newObjectMapper(new YAMLFactory());
-    ConnectorConfiguration cfg =
-        mapper.readValue(
-            FixtureHelpers.fixture("complete-config.yml"), ConnectorConfiguration.class);
+    ConnectorConfiguration cfg = loadFromResources("complete-config.yml");
     assertEquals("super-secret", cfg.getGitlab().getSharedSecretForHooks());
+  }
+
+  @Test
+  void theDefaultContainerConfigWorks() throws Exception {
+    ConnectorConfiguration cfg = loadFromResources("default-container-config.yml");
+  }
+
+  /**
+   * Helper to parse YAML files from the test resources path and turn them into
+   * ConnectorConfiguration objects for testing.
+   */
+  private ConnectorConfiguration loadFromResources(String pathToYaml) throws Exception {
+    return (new YamlConfigurationFactory<>(
+            ConnectorConfiguration.class,
+            Validators.newValidator(),
+            Jackson.newObjectMapper(),
+            "dw"))
+        .build(
+            ConnectorApplication.wrapConfigSourceProvider(new FileConfigurationSourceProvider()),
+            Resources.getResource(pathToYaml).getFile());
   }
 }
