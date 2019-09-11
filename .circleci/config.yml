@@ -42,7 +42,7 @@ jobs:
       - checkout
       - maven/with_cache:
           steps:
-            - run: mvn process-sources
+            - run: mvn -o process-sources
       - run:
           name: Ensure no source code was rewritten
           command: |
@@ -58,7 +58,7 @@ jobs:
       - checkout
       - maven/with_cache:
           steps:
-            - run: mvn package -Dcircleci.build.number=${CIRCLE_BUILD_NUM}
+            - run: mvn -o package -Dcircleci.build.number=${CIRCLE_BUILD_NUM}
       - run:
           name: Run the service check command
           command: |
@@ -71,7 +71,7 @@ jobs:
       - run:
           name: Save the version
           command: |
-            mvn help:evaluate \
+            mvn -o help:evaluate \
               -Dexpression=project.version \
               -q \
               -DforceStdout > target/version

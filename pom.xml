@@ -13,6 +13,7 @@
     <junit.version>5.5.1</junit.version>
     <metrics.statsd.version>4.2.0</metrics.statsd.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <surefire.version>3.0.0-M3</surefire.version>
   </properties>
 
   <repositories>
@@ -42,7 +43,13 @@
       <artifactId>metrics3-statsd</artifactId>
       <version>${metrics.statsd.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.28</version>
+    </dependency>
 
+    <!-- Test-only dependencies -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
@@ -52,13 +59,43 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>1.10.19</version>
+      <version>3.0.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.dropwizard</groupId>
       <artifactId>dropwizard-testing</artifactId>
       <version>${dropwizard.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!--
+      Dependencies needed for plugins.
+      If we don't include these here, they won't get cached.
+    -->
+    <dependency>
+      <groupId>org.apache.maven.surefire</groupId>
+      <artifactId>surefire-junit-platform</artifactId>
+      <version>${surefire.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.wagon</groupId>
+      <artifactId>wagon-provider-api</artifactId>
+      <version>1.0-alpha-6</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.objenesis</groupId>
+      <artifactId>objenesis</artifactId>
+      <version>3.0.1</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -73,8 +110,16 @@
         </configuration>
       </plugin>
       <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.1.1</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-help-plugin</artifactId>
+        <version>3.2.0</version>
+      </plugin>
+      <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.2</version>
+        <version>${surefire.version}</version>
         <configuration>
           <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
