@@ -11,6 +11,7 @@ import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.jersey.setup.JerseyEnvironment;
+import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,5 +45,10 @@ class ConnectorApplicationTest {
             "{\"statsd\":{\"host\":\"localhost\",\"port\":123,\"refreshPeriodSeconds\":3}}",
             ConnectorConfiguration.class);
     application.maybeConfigureStatsdMetrics(cfg, metricRegistry);
+  }
+
+  @Test
+  void initializeDoesNotThrow() {
+    application.initialize(new Bootstrap<>(application));
   }
 }

@@ -1,7 +1,11 @@
 FROM openjdk:11-slim
 
+ENV PORT=8080
+ENV ADMIN_PORT=8081
 ARG JAR
+ARG DEFAULT_CONFIG
 COPY ${JAR} /service.jar
+COPY ${DEFAULT_CONFIG} /default_config.yml
 
 RUN useradd --groups users \
             --home-dir / \
@@ -9,7 +13,7 @@ RUN useradd --groups users \
             service-user
 
 USER service-user
-EXPOSE 8080
-EXPOSE 8081
+EXPOSE $PORT
+EXPOSE $ADMIN_PORT
 ENTRYPOINT ["java", "--add-opens", "java.base/java.lang=ALL-UNNAMED", "-jar", "/service.jar"]
-CMD ["server"]
+CMD ["server", "/default_config.yml"]

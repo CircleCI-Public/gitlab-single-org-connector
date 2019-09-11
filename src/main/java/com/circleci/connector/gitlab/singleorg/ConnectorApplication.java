@@ -5,6 +5,10 @@ import com.circleci.connector.gitlab.singleorg.resources.HookResource;
 import com.codahale.metrics.MetricRegistry;
 import com.readytalk.metrics.StatsDReporter;
 import io.dropwizard.Application;
+import io.dropwizard.configuration.ConfigurationSourceProvider;
+import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
+import io.dropwizard.configuration.SubstitutingSourceProvider;
+import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -30,6 +34,20 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
           .build(statsd.getHost(), statsd.getPort())
           .start(statsd.getRefreshPeriodSeconds(), TimeUnit.SECONDS);
     }
+  }
+
+  /**
+   * Wrap any configuration source provider such that it will do env var substitution. This is
+   * hoisted out of {@link #initialize(Bootstrap)} in order to make it available for testing.
+   */
+  static ConfigurationSourceProvider wrapConfigSourceProvider(ConfigurationSourceProvider csp) {
+    return new SubstitutingSourceProvider(csp, new EnvironmentVariableSubstitutor());
+  }
+
+  @Override
+  public void initialize(Bootstrap<ConnectorConfiguration> bootstrap) {
+    bootstrap.setConfigurationSourceProvider(
+        wrapConfigSourceProvider(bootstrap.getConfigurationSourceProvider()));
   }
 
   /**
