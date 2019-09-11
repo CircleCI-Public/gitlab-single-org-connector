@@ -4,10 +4,6 @@ version: "2.1"
 
 orbs:
   maven:
-    executors:
-      java-11:
-        docker:
-          - image: circleci/openjdk:11-jdk
     commands:
       with_cache:
         parameters:
@@ -39,7 +35,9 @@ workflows:
 
 jobs:
   lint:
-    executor: maven/java-11
+    docker:
+      - image: maven:3-jdk-11-slim
+        entrypoint: bash
     steps:
       - checkout
       - maven/with_cache:
@@ -53,7 +51,9 @@ jobs:
               exit 1
             fi
   package:
-    executor: maven/java-11
+    docker:
+      - image: maven:3-jdk-11-slim
+        entrypoint: bash
     steps:
       - checkout
       - maven/with_cache:
@@ -89,7 +89,8 @@ jobs:
             - "*.jar"
             - version
   containerize:
-    executor: maven/java-11
+    docker:
+      - image: docker:19
     steps:
       - checkout
       - attach_workspace:
