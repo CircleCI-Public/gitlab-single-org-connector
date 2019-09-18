@@ -1,6 +1,7 @@
 package com.circleci.connector.gitlab.singleorg.resources;
 
 import com.circleci.connector.gitlab.singleorg.api.HookResponse;
+import com.circleci.connector.gitlab.singleorg.api.ImmutablePushHook;
 import com.circleci.connector.gitlab.singleorg.api.PushHook;
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,10 +64,9 @@ public class HookResource {
 
   /** Consume push hooks. */
   private HookResponse processPushHook(String body) throws Exception {
-    PushHook hook = MAPPER.readValue(body, PushHook.class);
-    hook.setId(UUID.randomUUID());
+    PushHook hook = MAPPER.readValue(body, ImmutablePushHook.class);
     LOGGER.info("Received a hook: {}", hook);
-    return new HookResponse(hook.getId(), HookResponse.Status.SUBMITTED);
+    return new HookResponse(hook.id(), HookResponse.Status.SUBMITTED);
   }
 
   /**
