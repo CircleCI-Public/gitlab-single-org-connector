@@ -16,15 +16,15 @@ class PushHookTest {
     String hookJson = FixtureHelpers.fixture("gitlab-push-hook-from-docs.json");
     assertNotNull(hookJson);
     PushHook hook = MAPPER.readValue(hookJson, PushHook.class);
-    assertEquals("push", hook.getObjectKind().toString());
-    assertEquals("95790bf891e76fee5e1747ab589903a6a1f80f22", hook.getBefore());
-    assertEquals("da1560886d4f094c3e6c9ef40349f7d38b5d27d7", hook.getAfter());
-    assertEquals("refs/heads/master", hook.getRef());
-    assertEquals(4, hook.getUserId());
-    assertEquals("John Smith", hook.getUserName());
-    assertEquals("jsmith", hook.getUserUsername());
-    assertEquals(15, hook.getProject().getId());
-    assertEquals("Diaspora", hook.getProject().getName());
-    assertEquals("git@example.com:mike/diaspora.git", hook.getProject().getGitSshUrl());
+    assertEquals("push", hook.objectKind().toString());
+    assertEquals("95790bf891e76fee5e1747ab589903a6a1f80f22", hook.before());
+    assertEquals("da1560886d4f094c3e6c9ef40349f7d38b5d27d7", hook.after());
+    assertEquals("refs/heads/master", hook.ref());
+    assertEquals(4, hook.userId());
+    assertEquals("John Smith", hook.userName());
+    assertEquals("jsmith", hook.userUsername());
+    assertEquals(15, hook.project().id());
+    assertEquals("Diaspora", hook.project().name());
+    assertEquals("git@example.com:mike/diaspora.git", hook.project().gitSshUrl());
   }
 }
