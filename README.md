@@ -9,6 +9,13 @@ quality.**
 
 ## GitLab configuration
 
+In Gitlab's project UI, go to `Settings > Integrations`, and add a webhook
+trigger, using the connector's base URL and the `/hook` route, e.g. 
+`https://connector.example.com/hook`.
+
+Add a shared secret (see configuration below), and leave SSL verification
+enabled.
+
 Gitlab allows you to specify a shared secret which they will send with every
 webhook delivery. If you add the following to your configuration it will
 require every webhook to include a `X-Gitlab-Token: my-shared-secret` header.
