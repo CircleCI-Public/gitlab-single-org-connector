@@ -122,6 +122,21 @@ public class PushHook {
     project = p;
   }
 
+  @Override
+  public String toString() {
+    return "PushHook{" +
+            "id=" + id +
+            ", objectKind=" + objectKind +
+            ", before='" + before + '\'' +
+            ", after='" + after + '\'' +
+            ", ref='" + ref + '\'' +
+            ", project=" + project +
+            ", userId=" + userId +
+            ", userName='" + userName + '\'' +
+            ", userUsername='" + userUsername + '\'' +
+            '}';
+  }
+
   static class Project {
     @Range(min = 1)
     private int id;
@@ -160,6 +175,15 @@ public class PushHook {
     @JsonProperty("git_ssh_url")
     public void setGitSshUrl(String sshUrl) {
       gitSshUrl = sshUrl;
+    }
+
+    @Override
+    public String toString() {
+      return "Project{" +
+              "id=" + id +
+              ", name='" + name + '\'' +
+              ", gitSshUrl='" + gitSshUrl + '\'' +
+              '}';
     }
   }
 }
