@@ -4,10 +4,13 @@ import com.circleci.connector.gitlab.singleorg.api.HookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutableHookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutablePushHook;
 import com.circleci.connector.gitlab.singleorg.api.PushHook;
+import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
+import java.util.Optional;
 import java.util.UUID;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.HeaderParam;
@@ -28,6 +31,7 @@ public class HookResource {
   private static final ObjectMapper MAPPER = Jackson.newObjectMapper();
   private static final Logger LOGGER = LoggerFactory.getLogger(HookResource.class);
 
+  @NotNull private final GitLab gitLabClient;
   /**
    * If non-null, the value of the X-Gitlab-Token header must be equal to the value of this string
    * or else we will return a 403.
@@ -39,7 +43,8 @@ public class HookResource {
    *     the X-Gitlab-Token header. If the values do no match then the hooks will be rejected with a
    *     403.
    */
-  public HookResource(String gitLabToken) {
+  public HookResource(GitLab gitLabClient, String gitLabToken) {
+    this.gitLabClient = gitLabClient;
     this.gitLabToken = gitLabToken;
   }
 
@@ -70,10 +75,17 @@ public class HookResource {
   private HookResponse processPushHook(String body) throws Exception {
     PushHook hook = MAPPER.readValue(body, ImmutablePushHook.class);
     LOGGER.info("Received a hook: {}", hook);
-    return ImmutableHookResponse.builder()
-        .id(hook.id())
-        .status(HookResponse.Status.SUBMITTED)
-        .build();
+    int projectId = hook.project().id();
+    String ref = hook.ref();
+
+    ImmutableHookResponse.Builder responseBuilder = ImmutableHookResponse.builder().id(hook.id());
+
+    Optional<String> config = gitLabClient.fetchCircleCiConfig(projectId, ref);
+    if (config.isEmpty()) {
+      LOGGER.info("Ignoring hook referring to project id {} without config", projectId);
+      return responseBuilder.status(HookResponse.Status.IGNORED).build();
+    }
+    return responseBuilder.status(HookResponse.Status.SUBMITTED).build();
   }
 
   /**

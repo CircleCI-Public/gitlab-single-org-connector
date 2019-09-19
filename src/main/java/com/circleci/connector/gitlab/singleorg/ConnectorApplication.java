@@ -1,5 +1,6 @@
 package com.circleci.connector.gitlab.singleorg;
 
+import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.circleci.client.v2.ApiClient;
 import com.circleci.client.v2.Configuration;
 import com.circleci.client.v2.api.DefaultApi;
@@ -66,9 +67,10 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
    */
   public void run(ConnectorConfiguration config, Environment environment) {
     DefaultApi circleCiApi = circleCiClient(config);
+    GitLab gitLab = new GitLab(config.getGitlab().getHost(), config.getGitlab().getAuthToken());
 
     environment.healthChecks().register("CircleCI API", new CircleCiApiHealthCheck(circleCiApi));
-    environment.jersey().register(new HookResource(config.getGitlab().getSharedSecretForHooks()));
+    environment.jersey().register(new HookResource(gitLab, config.getGitlab().getSharedSecretForHooks()));
 
     maybeConfigureStatsdMetrics(config, environment.metrics());
   }

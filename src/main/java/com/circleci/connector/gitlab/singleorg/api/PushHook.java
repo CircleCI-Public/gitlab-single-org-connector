@@ -35,7 +35,7 @@ public abstract class PushHook {
   abstract String after();
 
   @NotEmpty
-  abstract String ref();
+  public abstract String ref();
 
   @JsonProperty("user_id")
   @Range(min = 0)
@@ -50,14 +50,14 @@ public abstract class PushHook {
   abstract String userUsername();
 
   @NotNull
-  abstract Project project();
+  public abstract Project project();
 
   @Value.Immutable
   @JsonSerialize(as = ImmutableProject.class)
   @JsonDeserialize(as = ImmutableProject.class)
-  abstract static class Project {
+  public abstract static class Project {
     @Range(min = 1)
-    abstract int id();
+    public abstract int id();
 
     @NotEmpty
     abstract String name();
