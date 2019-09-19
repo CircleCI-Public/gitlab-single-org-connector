@@ -1,6 +1,7 @@
 package com.circleci.connector.gitlab.singleorg.resources;
 
 import com.circleci.connector.gitlab.singleorg.api.HookResponse;
+import com.circleci.connector.gitlab.singleorg.api.ImmutableHookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutablePushHook;
 import com.circleci.connector.gitlab.singleorg.api.PushHook;
 import com.codahale.metrics.annotation.Timed;
@@ -56,7 +57,10 @@ public class HookResource {
     if ("Push Hook".equals(type)) {
       return processPushHook(body);
     } else if (type != null) {
-      return new HookResponse(UUID.randomUUID(), HookResponse.Status.IGNORED);
+      return ImmutableHookResponse.builder()
+          .id(UUID.randomUUID())
+          .status(HookResponse.Status.IGNORED)
+          .build();
     } else {
       throw new BadRequestException("Expected X-Gitlab-Event header");
     }
@@ -66,7 +70,10 @@ public class HookResource {
   private HookResponse processPushHook(String body) throws Exception {
     PushHook hook = MAPPER.readValue(body, ImmutablePushHook.class);
     LOGGER.info("Received a hook: {}", hook);
-    return new HookResponse(hook.id(), HookResponse.Status.SUBMITTED);
+    return ImmutableHookResponse.builder()
+        .id(hook.id())
+        .status(HookResponse.Status.SUBMITTED)
+        .build();
   }
 
   /**

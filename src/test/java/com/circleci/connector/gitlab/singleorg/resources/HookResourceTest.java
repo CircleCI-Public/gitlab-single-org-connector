@@ -18,14 +18,14 @@ class HookResourceTest {
   void weCanProcessTheHookFromGitlabDocs() throws Exception {
     HookResource hr = new HookResource(null);
     HookResponse response = hr.processHook(gitLabPushHookFromDocs, "Push Hook", null);
-    assertEquals(HookResponse.Status.SUBMITTED, response.getStatus());
+    assertEquals(HookResponse.Status.SUBMITTED, response.status());
   }
 
   @Test
   void weCanProcessTheHookFromGitlabDocsWhenItSuppliesATokenAndWeAgree() throws Exception {
     HookResource hr = new HookResource("super-secret");
     HookResponse response = hr.processHook(gitLabPushHookFromDocs, "Push Hook", "super-secret");
-    assertEquals(HookResponse.Status.SUBMITTED, response.getStatus());
+    assertEquals(HookResponse.Status.SUBMITTED, response.status());
   }
 
   @Test
@@ -33,7 +33,7 @@ class HookResourceTest {
     HookResource hr = new HookResource(null);
     HookResponse response =
         hr.processHook(gitLabPushHookFromDocs, "Push Hook", "token-for-us-to-ignore");
-    assertEquals(HookResponse.Status.SUBMITTED, response.getStatus());
+    assertEquals(HookResponse.Status.SUBMITTED, response.status());
   }
 
   @Test
@@ -66,7 +66,7 @@ class HookResourceTest {
             "Job Hook");
     for (String nonPushHookType : nonPushHookTypes) {
       HookResponse response = hr.processHook("{}", nonPushHookType, null);
-      assertEquals(HookResponse.Status.IGNORED, response.getStatus());
+      assertEquals(HookResponse.Status.IGNORED, response.status());
     }
   }
 
