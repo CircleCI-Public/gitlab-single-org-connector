@@ -39,6 +39,11 @@ jobs:
       - image: maven:3-jdk-11-slim
         entrypoint: bash
     steps:
+      - run:
+          name: Install git
+          command: |
+            apt-get update -y
+            apt-get install -y --no-install-recommends git
       - checkout
       - maven/with_cache:
           steps:
