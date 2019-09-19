@@ -14,9 +14,10 @@ class HookResponseTest {
   @Test
   void hookResponseSerializes() throws Exception {
     UUID id = UUID.fromString("ae45d0e4-763a-493e-a655-76ce1195320a");
-    HookResponse hr = new HookResponse(id, HookResponse.Status.SUBMITTED);
-    assertEquals(id, hr.getId());
-    assertEquals(HookResponse.Status.SUBMITTED, hr.getStatus());
+    HookResponse hr =
+        ImmutableHookResponse.builder().id(id).status(HookResponse.Status.SUBMITTED).build();
+    assertEquals(id, hr.id());
+    assertEquals(HookResponse.Status.SUBMITTED, hr.status());
     assertEquals(
         "{\"id\":\"ae45d0e4-763a-493e-a655-76ce1195320a\",\"status\":\"SUBMITTED\"}",
         MAPPER.writeValueAsString(hr));
