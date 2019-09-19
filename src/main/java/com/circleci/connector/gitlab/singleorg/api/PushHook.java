@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.util.UUID;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
-
 import org.hibernate.validator.constraints.Range;
 import org.immutables.value.Value;
 
@@ -56,7 +55,7 @@ public abstract class PushHook {
   @Value.Immutable
   @JsonSerialize(as = ImmutableProject.class)
   @JsonDeserialize(as = ImmutableProject.class)
-  static abstract class Project {
+  abstract static class Project {
     @Range(min = 1)
     abstract int id();
 
