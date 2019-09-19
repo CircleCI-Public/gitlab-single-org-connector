@@ -29,7 +29,7 @@ workflows:
           requires:
             - lint
       - containerize:
-          context: org-global
+          context: image-publishing
           requires:
             - package
 
@@ -114,8 +114,8 @@ jobs:
           name: Authenticate with Docker Hub
           command: |
             docker login \
-              --username "${DOCKER_HUB_USER}" \
-              --password "${DOCKER_HUB_PASSWORD}"
+              --username "${DOCKER_LOGIN}" \
+              --password "${DOCKER_PASSWORD}"
       - run:
           name: Build Docker container
           command: |
