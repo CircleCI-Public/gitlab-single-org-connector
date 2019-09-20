@@ -1,19 +1,28 @@
 package com.circleci.connector.gitlab.singleorg.resources;
 
+import com.circleci.client.v2.ApiException;
+import com.circleci.client.v2.api.DefaultApi;
+import com.circleci.client.v2.model.PipelineLight;
+import com.circleci.client.v2.model.TriggerPipelineParameters;
+import com.circleci.connector.gitlab.singleorg.ConnectorConfiguration;
 import com.circleci.connector.gitlab.singleorg.api.HookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutableHookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutablePushHook;
 import com.circleci.connector.gitlab.singleorg.api.PushHook;
 import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.codahale.metrics.annotation.Timed;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.BadRequestException;
+import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -31,21 +40,24 @@ public class HookResource {
   private static final ObjectMapper MAPPER = Jackson.newObjectMapper();
   private static final Logger LOGGER = LoggerFactory.getLogger(HookResource.class);
 
+  /** A configured GitLab API client. */
   @NotNull private final GitLab gitLabClient;
-  /**
-   * If non-null, the value of the X-Gitlab-Token header must be equal to the value of this string
-   * or else we will return a 403.
-   */
-  private final String gitLabToken;
+
+  /** The CircleCI API library, configured to call the CircleCI REST API. */
+  @NotNull private final DefaultApi circleCiApi;
+
+  /** The configuration for this service. */
+  @NotNull private final ConnectorConfiguration config;
 
   /**
-   * @param gitLabToken A shared secret that - if non-null - will be checked against the value of
-   *     the X-Gitlab-Token header. If the values do no match then the hooks will be rejected with a
-   *     403.
+   * @param gitLabClient A configured GitLab API client.
+   * @param circleCiApi The CircleCI API library, configured to call the CircleCI REST API.
+   * @param config The configuration for this service.
    */
-  public HookResource(GitLab gitLabClient, String gitLabToken) {
+  public HookResource(GitLab gitLabClient, DefaultApi circleCiApi, ConnectorConfiguration config) {
     this.gitLabClient = gitLabClient;
-    this.gitLabToken = gitLabToken;
+    this.circleCiApi = circleCiApi;
+    this.config = config;
   }
 
   /** Consume all hooks. */
@@ -73,19 +85,61 @@ public class HookResource {
 
   /** Consume push hooks. */
   private HookResponse processPushHook(String body) throws Exception {
+    // Parse the hook
     PushHook hook = MAPPER.readValue(body, ImmutablePushHook.class);
     LOGGER.info("Received a hook: {}", hook);
     int projectId = hook.project().id();
-    String ref = hook.ref();
 
     ImmutableHookResponse.Builder responseBuilder = ImmutableHookResponse.builder().id(hook.id());
 
-    Optional<String> config = gitLabClient.fetchCircleCiConfig(projectId, ref);
+    // Find the slug for the GitHub project which we're using as a fake for the GitLab project
+    // referred to in the push hook.
+    String projectSlug = config.getDomainMapping().getRepositories().getOrDefault(projectId, null);
+    if (projectSlug == null) {
+      throw new NotFoundException("No project found with ID " + projectId);
+    }
+
+    // Fetch the config from GitLab
+    Optional<String> config = gitLabClient.fetchCircleCiConfig(projectId, hook.ref());
     if (config.isEmpty()) {
       LOGGER.info("Ignoring hook referring to project id {} without config", projectId);
       return responseBuilder.status(HookResponse.Status.IGNORED).build();
     }
-    return responseBuilder.status(HookResponse.Status.SUBMITTED).build();
+
+    // Trigger a Pipeline on CircleCI
+    PipelineLight pipeline;
+    try {
+      var params = new TriggerPipelineWithConfigParameters();
+      params.setConfig(config.get());
+      params.setBranch(hook.branch());
+      pipeline = circleCiApi.triggerPipeline(projectSlug, params);
+    } catch (ApiException e) {
+      LOGGER.error("Failed to trigger pipeline", e);
+
+      // Pass through 4xx responses verbatim for ease of debugging.
+      if (e.getCode() >= 400 && e.getCode() < 500) {
+        throw new ClientErrorException(
+            maybeGetCircleCiApiErrorMessage(e), Response.Status.fromStatusCode(e.getCode()));
+      }
+      throw e;
+    }
+
+    return responseBuilder.status(HookResponse.Status.SUBMITTED).pipeline(pipeline).build();
+  }
+
+  /**
+   * Some ApiExceptions have JSON as their message. The JSON is just {"message": "The real message"}
+   * so we attempt to unwrap it here in order to avoid double JSON in the output.
+   *
+   * @param e An ApiException as thrown by the CircleCI API.
+   * @return The error message from the exception, possibly unwrapped from JSON.
+   */
+  private static String maybeGetCircleCiApiErrorMessage(ApiException e) {
+    try {
+      return MAPPER.readValue(e.getMessage(), CircleCiErrorResponse.class).getMessage();
+    } catch (Exception _e) {
+      return e.getMessage();
+    }
   }
 
   /**
@@ -96,9 +150,35 @@ public class HookResource {
    *     expected value.
    */
   private void maybeValidateGitLabToken(String token) {
+    String gitLabToken = config.getGitlab().getSharedSecretForHooks();
     if (gitLabToken != null && !gitLabToken.equals(token)) {
       throw new WebApplicationException(
           "Value of X-Gitlab-Token did not match configured value", Response.Status.FORBIDDEN);
+    }
+  }
+
+  static class TriggerPipelineWithConfigParameters extends TriggerPipelineParameters {
+    @JsonProperty private String config;
+
+    @Nullable
+    public String getConfig() {
+      return config;
+    }
+
+    public void setConfig(String cfg) {
+      config = cfg;
+    }
+  }
+
+  static class CircleCiErrorResponse {
+    @JsonProperty private String message;
+
+    public String getMessage() {
+      return message;
+    }
+
+    public void setMessage(String msg) {
+      message = msg;
     }
   }
 }

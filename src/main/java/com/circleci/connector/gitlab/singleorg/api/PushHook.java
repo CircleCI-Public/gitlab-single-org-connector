@@ -24,6 +24,15 @@ public abstract class PushHook {
     return UUID.randomUUID();
   };
 
+  @Value.Derived
+  @JsonIgnore
+  public String branch() {
+    if (ref() != null && ref().startsWith("refs/heads/")) {
+      return ref().substring(11);
+    }
+    return null;
+  }
+
   @JsonProperty("object_kind")
   @NotEmpty
   abstract ObjectKind objectKind();
