@@ -8,16 +8,17 @@ import org.slf4j.LoggerFactory;
 
 public class GitLab {
   private static final Logger LOGGER = LoggerFactory.getLogger(GitLab.class);
-  private GitLabApi api;
+  private GitLabApi gitLabApi;
 
-  public GitLab(String host, String authToken) {
-    api = new GitLabApi(host, authToken);
+  public GitLab(GitLabApi gitLabApi) {
+    this.gitLabApi = gitLabApi;
   }
 
   static final String CIRCLECI_CONFIG_PATH = ".circleci/config.yml";
 
   /**
    * Get CircleCI config contents from GitLab project at ref
+   *
    * @param projectId GitLab project id
    * @return A string with the contents of CircleCI configuration file
    */
@@ -25,7 +26,10 @@ public class GitLab {
     LOGGER.info("Fetching CircleCI config for project {} at ref {}", projectId, ref);
     try {
       return Optional.ofNullable(
-          api.getRepositoryFileApi().getFile(projectId, CIRCLECI_CONFIG_PATH, ref).getContent());
+          gitLabApi
+              .getRepositoryFileApi()
+              .getFile(projectId, CIRCLECI_CONFIG_PATH, ref)
+              .getContent());
     } catch (GitLabApiException e) {
       LOGGER.warn("Error fetching CircleCI config", e);
     }

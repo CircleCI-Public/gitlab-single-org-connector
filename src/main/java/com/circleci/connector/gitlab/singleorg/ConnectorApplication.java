@@ -1,10 +1,11 @@
 package com.circleci.connector.gitlab.singleorg;
 
-import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.circleci.client.v2.ApiClient;
 import com.circleci.client.v2.Configuration;
 import com.circleci.client.v2.api.DefaultApi;
+import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.circleci.connector.gitlab.singleorg.health.CircleCiApiHealthCheck;
+import com.circleci.connector.gitlab.singleorg.health.GitLabApiHealthCheck;
 import com.circleci.connector.gitlab.singleorg.resources.HookResource;
 import com.codahale.metrics.MetricRegistry;
 import com.readytalk.metrics.StatsDReporter;
@@ -15,6 +16,7 @@ import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import java.util.concurrent.TimeUnit;
+import org.gitlab4j.api.GitLabApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,10 +69,15 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
    */
   public void run(ConnectorConfiguration config, Environment environment) {
     DefaultApi circleCiApi = circleCiClient(config);
-    GitLab gitLab = new GitLab(config.getGitlab().getHost(), config.getGitlab().getAuthToken());
+    GitLabApi gitLabApi =
+        new GitLabApi(config.getGitlab().getHost(), config.getGitlab().getAuthToken());
+    GitLab gitLab = new GitLab(gitLabApi);
 
     environment.healthChecks().register("CircleCI API", new CircleCiApiHealthCheck(circleCiApi));
-    environment.jersey().register(new HookResource(gitLab, config.getGitlab().getSharedSecretForHooks()));
+    environment.healthChecks().register("GitLab API", new GitLabApiHealthCheck(gitLabApi));
+    environment
+        .jersey()
+        .register(new HookResource(gitLab, config.getGitlab().getSharedSecretForHooks()));
 
     maybeConfigureStatsdMetrics(config, environment.metrics());
   }
