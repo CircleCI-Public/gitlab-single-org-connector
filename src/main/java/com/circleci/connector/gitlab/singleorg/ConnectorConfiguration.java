@@ -2,14 +2,28 @@ package com.circleci.connector.gitlab.singleorg;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;
+import javax.validation.constraints.NotEmpty;
 import org.hibernate.validator.constraints.Range;
 
 public class ConnectorConfiguration extends Configuration {
+  private CircleCi circleCi;
+
   private GitLab gitlab;
 
   private Statsd statsd;
 
   public ConnectorConfiguration() {}
+
+  CircleCi getCircleCi() {
+    if (circleCi == null) {
+      return new CircleCi();
+    }
+    return circleCi;
+  }
+
+  void setCircleCi(CircleCi cci) {
+    circleCi = cci;
+  }
 
   GitLab getGitlab() {
     if (gitlab == null) {
@@ -31,6 +45,22 @@ public class ConnectorConfiguration extends Configuration {
 
   void setStatsd(Statsd s) {
     statsd = s;
+  }
+
+  static class CircleCi {
+    @NotEmpty private String apiToken;
+
+    public CircleCi() {}
+
+    @JsonProperty
+    String getApiToken() {
+      return apiToken;
+    }
+
+    @JsonProperty
+    void setApiToken(String token) {
+      apiToken = token;
+    }
   }
 
   static class GitLab {

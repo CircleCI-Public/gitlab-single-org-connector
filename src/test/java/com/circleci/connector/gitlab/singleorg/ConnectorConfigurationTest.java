@@ -14,6 +14,7 @@ class ConnectorConfigurationTest {
   @Test
   void weDoNotNPEWhenSomePartsOfTheConfigAreMissing() {
     ConnectorConfiguration cfg = new ConnectorConfiguration();
+    assertNotNull(cfg.getCircleCi());
     assertNotNull(cfg.getGitlab());
     assertNotNull(cfg.getStatsd());
   }
@@ -22,6 +23,7 @@ class ConnectorConfigurationTest {
   void weCanSetEverythingInAConfigFileAndItStillWorks() throws Exception {
     ConnectorConfiguration cfg = loadFromResources("complete-config.yml");
     assertEquals("super-secret", cfg.getGitlab().getSharedSecretForHooks());
+    assertNotNull("not-really-a-token", cfg.getCircleCi().getApiToken());
   }
 
   @Test
