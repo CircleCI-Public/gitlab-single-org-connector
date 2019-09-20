@@ -1,5 +1,8 @@
 package com.circleci.connector.gitlab.singleorg;
 
+import com.circleci.client.v2.ApiClient;
+import com.circleci.client.v2.Configuration;
+import com.circleci.client.v2.api.DefaultApi;
 import com.circleci.connector.gitlab.singleorg.health.CircleCiApiHealthCheck;
 import com.circleci.connector.gitlab.singleorg.resources.HookResource;
 import com.codahale.metrics.MetricRegistry;
@@ -36,6 +39,13 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
     }
   }
 
+  /** Create and configure a CircleCI client, but don't execute any connections. */
+  private DefaultApi circleCiClient(ConnectorConfiguration config) {
+    ApiClient apiClient = Configuration.getDefaultApiClient();
+    apiClient.setApiKey(config.getCircleCi().getApiToken());
+    return new DefaultApi(apiClient);
+  }
+
   /**
    * Wrap any configuration source provider such that it will do env var substitution. This is
    * hoisted out of {@link #initialize(Bootstrap)} in order to make it available for testing.
@@ -55,7 +65,9 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
    * of how any of this works.
    */
   public void run(ConnectorConfiguration config, Environment environment) {
-    environment.healthChecks().register("CircleCI API", new CircleCiApiHealthCheck());
+    DefaultApi circleCiApi = circleCiClient(config);
+
+    environment.healthChecks().register("CircleCI API", new CircleCiApiHealthCheck(circleCiApi));
     environment.jersey().register(new HookResource(config.getGitlab().getSharedSecretForHooks()));
 
     maybeConfigureStatsdMetrics(config, environment.metrics());

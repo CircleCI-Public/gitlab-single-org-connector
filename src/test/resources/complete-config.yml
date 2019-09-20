@@ -1,5 +1,7 @@
 ---
 
+circleCi:
+  apiToken: "not-really-a-token"
 gitlab:
   sharedSecretForHooks: "super-secret"
 statsd:

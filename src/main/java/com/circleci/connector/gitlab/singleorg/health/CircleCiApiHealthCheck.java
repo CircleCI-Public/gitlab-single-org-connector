@@ -1,5 +1,7 @@
 package com.circleci.connector.gitlab.singleorg.health;
 
+import com.circleci.client.v2.ApiException;
+import com.circleci.client.v2.api.DefaultApi;
 import com.codahale.metrics.health.HealthCheck;
 
 /**
@@ -8,14 +10,26 @@ import com.codahale.metrics.health.HealthCheck;
  * pipelines.
  */
 public class CircleCiApiHealthCheck extends HealthCheck {
+  private final DefaultApi api;
+
+  public CircleCiApiHealthCheck(DefaultApi circleCiApi) {
+    api = circleCiApi;
+  }
+
   /**
    * Connect to the CircleCI API and return healthy if we can make an authenticated call to CircleCI
    * and unhealthy if we can't.
    */
   @Override
   protected Result check() {
-    // TODO: Actually run a CircleCI API call to ensure we have access to the
-    // CircleCI API.
-    return Result.healthy();
+    try {
+      if (api.getCurrentUser() != null) {
+        return Result.healthy();
+      } else {
+        return Result.unhealthy("Returned null user from a successful API request");
+      }
+    } catch (ApiException e) {
+      return Result.unhealthy(e.getMessage());
+    }
   }
 }
