@@ -2,8 +2,10 @@ package com.circleci.connector.gitlab.singleorg;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;
+import java.util.Map;
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.Pattern;
 import org.hibernate.validator.constraints.Range;
 
 public class ConnectorConfiguration extends Configuration {
@@ -12,6 +14,8 @@ public class ConnectorConfiguration extends Configuration {
   @Valid private GitLab gitlab;
 
   @Valid private Statsd statsd;
+
+  @Valid private DomainMapping domainMapping;
 
   public ConnectorConfiguration() {}
 
@@ -46,6 +50,17 @@ public class ConnectorConfiguration extends Configuration {
 
   void setStatsd(Statsd s) {
     statsd = s;
+  }
+
+  public DomainMapping getDomainMapping() {
+    if (domainMapping == null) {
+      return new DomainMapping();
+    }
+    return domainMapping;
+  }
+
+  public void setDomainMapping(DomainMapping domainMapping) {
+    this.domainMapping = domainMapping;
   }
 
   static class CircleCi {
@@ -143,6 +158,23 @@ public class ConnectorConfiguration extends Configuration {
     @JsonProperty
     void setRefreshPeriodSeconds(int seconds) {
       refreshPeriodSeconds = seconds;
+    }
+  }
+
+  static class DomainMapping {
+    private Map<@Range(min = 0) Integer, @Pattern(regexp = "[^/]+/[^/]+/[^/]+") String>
+        repositories;
+
+    public Map<Integer, String> getRepositories() {
+      return repositories;
+    }
+
+    /**
+     * @param repositories A map of GitLab repository ids to CircleCI repository paths, like
+     *     "gh/org/repo"
+     */
+    public void setRepositories(Map<Integer, String> repositories) {
+      this.repositories = repositories;
     }
   }
 }
