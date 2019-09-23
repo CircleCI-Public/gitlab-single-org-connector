@@ -66,7 +66,11 @@ public class ConnectorConfiguration extends Configuration {
   static class GitLab {
     private String sharedSecretForHooks;
 
-    public GitLab() {}
+    private String host = "https://gitlab.com";
+
+    private String authToken;
+
+    GitLab() {}
 
     @JsonProperty
     String getSharedSecretForHooks() {
@@ -76,6 +80,26 @@ public class ConnectorConfiguration extends Configuration {
     @JsonProperty
     void setSharedSecretForHooks(String secret) {
       sharedSecretForHooks = secret;
+    }
+
+    @JsonProperty
+    public String getHost() {
+      return host;
+    }
+
+    @JsonProperty
+    public void setHost(String host) {
+      this.host = host;
+    }
+
+    @JsonProperty
+    public String getAuthToken() {
+      return authToken;
+    }
+
+    @JsonProperty
+    public void setAuthToken(String authToken) {
+      this.authToken = authToken;
     }
   }
 

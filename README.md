@@ -16,6 +16,13 @@ trigger, using the connector's base URL and the `/hook` route, e.g.
 Add a shared secret (see configuration below), and leave SSL verification
 enabled.
 
+Set your auth token, required to download your CircleCI config file in the
+configuration:
+```yaml
+gitlab:
+  authToken: "my-auth-token"
+```
+
 Gitlab allows you to specify a shared secret which they will send with every
 webhook delivery. If you add the following to your configuration it will
 require every webhook to include a `X-Gitlab-Token: my-shared-secret` header.
@@ -23,6 +30,7 @@ require every webhook to include a `X-Gitlab-Token: my-shared-secret` header.
 ```yaml
 gitlab:
   sharedSecretForHooks: "my-shared-secret"
+  authToken: "my-auth-token"
 ```
 
 If that configuration item is not set, no validation will be done. If it _is_
