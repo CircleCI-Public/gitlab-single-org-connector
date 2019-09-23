@@ -2,15 +2,16 @@ package com.circleci.connector.gitlab.singleorg;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;
+import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
 import org.hibernate.validator.constraints.Range;
 
 public class ConnectorConfiguration extends Configuration {
-  private CircleCi circleCi;
+  @Valid private CircleCi circleCi;
 
-  private GitLab gitlab;
+  @Valid private GitLab gitlab;
 
-  private Statsd statsd;
+  @Valid private Statsd statsd;
 
   public ConnectorConfiguration() {}
 
