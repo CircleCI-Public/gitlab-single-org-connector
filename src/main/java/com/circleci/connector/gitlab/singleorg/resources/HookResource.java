@@ -1,5 +1,6 @@
 package com.circleci.connector.gitlab.singleorg.resources;
 
+import com.circleci.connector.gitlab.singleorg.ConnectorConfiguration;
 import com.circleci.connector.gitlab.singleorg.api.HookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutableHookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutablePushHook;
@@ -38,14 +39,20 @@ public class HookResource {
    */
   private final String gitLabToken;
 
+  @NotNull private final ConnectorConfiguration.DomainMapping domainMapping;
+
   /**
    * @param gitLabToken A shared secret that - if non-null - will be checked against the value of
    *     the X-Gitlab-Token header. If the values do no match then the hooks will be rejected with a
    *     403.
+   * @param domainMapping the configuration containing a mapping of organizations, repositories,
+   *     users, etc from GitLab to GitHub
    */
-  public HookResource(GitLab gitLabClient, String gitLabToken) {
+  public HookResource(
+      GitLab gitLabClient, String gitLabToken, ConnectorConfiguration.DomainMapping domainMapping) {
     this.gitLabClient = gitLabClient;
     this.gitLabToken = gitLabToken;
+    this.domainMapping = domainMapping;
   }
 
   /** Consume all hooks. */
@@ -79,6 +86,12 @@ public class HookResource {
     String ref = hook.ref();
 
     ImmutableHookResponse.Builder responseBuilder = ImmutableHookResponse.builder().id(hook.id());
+
+    String projectCircleCiSlug = domainMapping.getRepositories().get(projectId);
+    if (projectCircleCiSlug == null) {
+      LOGGER.info("Ignoring hook referring to project {} with no configured mapping", projectId);
+      return responseBuilder.status(HookResponse.Status.IGNORED).build();
+    }
 
     Optional<String> config = gitLabClient.fetchCircleCiConfig(projectId, ref);
     if (config.isEmpty()) {

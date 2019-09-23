@@ -77,7 +77,9 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
     environment.healthChecks().register("GitLab API", new GitLabApiHealthCheck(gitLabApi));
     environment
         .jersey()
-        .register(new HookResource(gitLab, config.getGitlab().getSharedSecretForHooks()));
+        .register(
+            new HookResource(
+                gitLab, config.getGitlab().getSharedSecretForHooks(), config.getDomainMapping()));
 
     maybeConfigureStatsdMetrics(config, environment.metrics());
   }

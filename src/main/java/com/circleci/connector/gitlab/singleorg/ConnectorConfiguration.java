@@ -161,12 +161,18 @@ public class ConnectorConfiguration extends Configuration {
     }
   }
 
-  static class DomainMapping {
+  public static class DomainMapping {
     private Map<@Range(min = 0) Integer, @Pattern(regexp = "[^/]+/[^/]+/[^/]+") String>
         repositories;
 
     public Map<Integer, String> getRepositories() {
       return repositories;
+    }
+
+    public DomainMapping() {}
+
+    public DomainMapping(Map<Integer, String> repositories) {
+      this.repositories = repositories;
     }
 
     /**
