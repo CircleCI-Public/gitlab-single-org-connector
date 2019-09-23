@@ -9,11 +9,11 @@ import javax.validation.constraints.Pattern;
 import org.hibernate.validator.constraints.Range;
 
 public class ConnectorConfiguration extends Configuration {
-  private CircleCi circleCi;
+  @Valid private CircleCi circleCi;
 
-  private GitLab gitlab;
+  @Valid private GitLab gitlab;
 
-  private Statsd statsd;
+  @Valid private Statsd statsd;
 
   @Valid private DomainMapping domainMapping;
 
