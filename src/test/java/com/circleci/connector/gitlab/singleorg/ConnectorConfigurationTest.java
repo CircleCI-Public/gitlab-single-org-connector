@@ -8,6 +8,7 @@ import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.jersey.validation.Validators;
 import io.dropwizard.util.Resources;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class ConnectorConfigurationTest {
@@ -17,6 +18,7 @@ class ConnectorConfigurationTest {
     assertNotNull(cfg.getCircleCi());
     assertNotNull(cfg.getGitlab());
     assertNotNull(cfg.getStatsd());
+    assertNotNull(cfg.getDomainMapping());
   }
 
   @Test
@@ -24,6 +26,7 @@ class ConnectorConfigurationTest {
     ConnectorConfiguration cfg = loadFromResources("complete-config.yml");
     assertEquals("super-secret", cfg.getGitlab().getSharedSecretForHooks());
     assertNotNull("not-really-a-token", cfg.getCircleCi().getApiToken());
+    assertEquals(Map.of(123, "gh/ghorg/ghrepo"), cfg.getDomainMapping().getRepositories());
   }
 
   @Test

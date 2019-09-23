@@ -8,3 +8,6 @@ statsd:
   host: "localhost"
   port: 123
   refreshPeriodSeconds: 3
+domainMapping:
+  repositories:
+    123: gh/ghorg/ghrepo
