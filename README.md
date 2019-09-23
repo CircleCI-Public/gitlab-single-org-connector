@@ -37,6 +37,21 @@ If that configuration item is not set, no validation will be done. If it _is_
 set then it is required to be present and any hook that does not set the
 header will be given a `403 Forbidden` response.
 
+## Mapping GitLab repositories
+
+The connector operates by taking advantage of the existing GitHub to CircleCI
+integration. Thus it requires you to setup a GitHub project and configure the
+GitLab to GitHub mapping in the configuration.
+
+For example, for the GitLab project with ID 1000, map it to the `myorg/myrepo`
+GitHub repository:
+
+```yaml
+domainMapping:
+  repositories:
+    1000: gh/myorg/myrepo
+```
+
 ## Logging
 
 By default, this service will log to standard output. To configure it further,
