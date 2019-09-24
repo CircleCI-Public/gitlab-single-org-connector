@@ -2,6 +2,7 @@ package com.circleci.connector.gitlab.singleorg;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;
+import java.util.HashMap;
 import java.util.Map;
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
@@ -30,7 +31,7 @@ public class ConnectorConfiguration extends Configuration {
     circleCi = cci;
   }
 
-  GitLab getGitlab() {
+  public GitLab getGitlab() {
     if (gitlab == null) {
       return new GitLab();
     }
@@ -79,7 +80,7 @@ public class ConnectorConfiguration extends Configuration {
     }
   }
 
-  static class GitLab {
+  public static class GitLab {
     private String sharedSecretForHooks;
 
     private String host = "https://gitlab.com";
@@ -89,7 +90,7 @@ public class ConnectorConfiguration extends Configuration {
     GitLab() {}
 
     @JsonProperty
-    String getSharedSecretForHooks() {
+    public String getSharedSecretForHooks() {
       return sharedSecretForHooks;
     }
 
@@ -161,11 +162,14 @@ public class ConnectorConfiguration extends Configuration {
     }
   }
 
-  static class DomainMapping {
+  public static class DomainMapping {
     private Map<@Range(min = 0) Integer, @Pattern(regexp = "[^/]+/[^/]+/[^/]+") String>
         repositories;
 
     public Map<Integer, String> getRepositories() {
+      if (repositories == null) {
+        return new HashMap<>();
+      }
       return repositories;
     }
 

@@ -19,7 +19,11 @@ class HookResponseTest {
     assertEquals(id, hr.id());
     assertEquals(HookResponse.Status.SUBMITTED, hr.status());
     assertEquals(
-        "{\"id\":\"ae45d0e4-763a-493e-a655-76ce1195320a\",\"status\":\"SUBMITTED\"}",
+        "{"
+            + "\"id\":\"ae45d0e4-763a-493e-a655-76ce1195320a\","
+            + "\"status\":\"SUBMITTED\","
+            + "\"pipeline\":null"
+            + "}",
         MAPPER.writeValueAsString(hr));
   }
 }

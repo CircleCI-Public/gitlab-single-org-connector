@@ -1,8 +1,10 @@
 package com.circleci.connector.gitlab.singleorg.api;
 
+import com.circleci.client.v2.model.PipelineLight;
 import com.circleci.connector.gitlab.singleorg.resources.HookResource;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import org.immutables.value.Value;
 
 /** For responses to the /hooks/* endpoints as implemented by {@link HookResource}. */
@@ -18,4 +20,8 @@ public abstract class HookResponse {
 
   @JsonProperty
   public abstract Status status();
+
+  @JsonProperty
+  @Nullable
+  public abstract PipelineLight pipeline();
 }
