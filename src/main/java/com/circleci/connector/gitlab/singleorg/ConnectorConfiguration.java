@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import org.hibernate.validator.constraints.Range;
 
@@ -65,7 +66,8 @@ public class ConnectorConfiguration extends Configuration {
   }
 
   static class CircleCi {
-    @NotEmpty private String apiToken;
+
+    @NotEmpty @NotNull private String apiToken;
 
     public CircleCi() {}
 
@@ -85,7 +87,7 @@ public class ConnectorConfiguration extends Configuration {
 
     private String host = "https://gitlab.com";
 
-    private String authToken;
+    @NotEmpty @NotNull private String authToken;
 
     GitLab() {}
 

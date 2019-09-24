@@ -49,12 +49,17 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
     return new DefaultApi(apiClient);
   }
 
+  private GitLabApi gitLabApi(ConnectorConfiguration config) {
+    String gitLabAuthToken = config.getGitlab().getAuthToken();
+    return new GitLabApi(config.getGitlab().getHost(), gitLabAuthToken);
+  }
+
   /**
    * Wrap any configuration source provider such that it will do env var substitution. This is
    * hoisted out of {@link #initialize(Bootstrap)} in order to make it available for testing.
    */
   static ConfigurationSourceProvider wrapConfigSourceProvider(ConfigurationSourceProvider csp) {
-    return new SubstitutingSourceProvider(csp, new EnvironmentVariableSubstitutor());
+    return new SubstitutingSourceProvider(csp, new EnvironmentVariableSubstitutor(true));
   }
 
   @Override
@@ -69,8 +74,7 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
    */
   public void run(ConnectorConfiguration config, Environment environment) {
     DefaultApi circleCiApi = circleCiClient(config);
-    GitLabApi gitLabApi =
-        new GitLabApi(config.getGitlab().getHost(), config.getGitlab().getAuthToken());
+    GitLabApi gitLabApi = gitLabApi(config);
     GitLab gitLab = new GitLab(gitLabApi);
 
     environment.healthChecks().register("CircleCI API", new CircleCiApiHealthCheck(circleCiApi));

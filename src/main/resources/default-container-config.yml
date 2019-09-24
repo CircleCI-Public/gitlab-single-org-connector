@@ -1,7 +1,7 @@
 ---
 
 circleCi:
-  apiToken: ${CIRCLECI_API_TOKEN:-set this to your token value}
+  apiToken: ${CIRCLECI_API_TOKEN} #set this to your token value
 server:
   applicationConnectors:
     - type: http
@@ -9,3 +9,5 @@ server:
   adminConnectors:
     - type: http
       port: ${ADMIN_PORT:-8081}
+gitlab:
+  authToken: ${GITLAB_AUTH_TOKEN} #set this to gitlab's user token value

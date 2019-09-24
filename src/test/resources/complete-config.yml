@@ -3,6 +3,7 @@
 circleCi:
   apiToken: "not-really-a-token"
 gitlab:
+  authToken: "not-a-token-either"
   sharedSecretForHooks: "super-secret"
 statsd:
   host: "localhost"
