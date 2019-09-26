@@ -65,12 +65,10 @@ jobs:
           steps:
             - run: mvn -o package -Dcircleci.build.number=${CIRCLE_BUILD_NUM}
       - run:
-          name: Run the service check command
-          command: |
-            java -jar target/gitlab-single-org-connector*.jar check
-      - run:
           name: Run the service check command with a config
           command: |
+            export CIRCLECI_API_TOKEN=circleci-token
+            export GITLAB_AUTH_TOKEN=gitlab-token
             java -jar target/gitlab-single-org-connector*.jar \
                  check src/main/resources/default-container-config.yml
             java -jar target/gitlab-single-org-connector*.jar \
@@ -127,7 +125,10 @@ jobs:
       - run:
           name: Run service check command in container
           command: |
-            docker run -it --rm "$(cat docker.tag)" check
+            docker run -it \
+              --env CIRCLECI_API_TOKEN=circleci-token \
+              --env GITLAB_AUTH_TOKEN=gitlab-token \
+              --rm "$(cat docker.tag)" check /default_config.yml
       - run:
           name: Push container if we're on master
           command: |

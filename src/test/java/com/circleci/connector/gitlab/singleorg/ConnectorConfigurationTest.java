@@ -2,8 +2,10 @@ package com.circleci.connector.gitlab.singleorg;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.dropwizard.configuration.FileConfigurationSourceProvider;
+import io.dropwizard.configuration.UndefinedEnvironmentVariableException;
 import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.jersey.validation.Validators;
@@ -25,13 +27,15 @@ class ConnectorConfigurationTest {
   void weCanSetEverythingInAConfigFileAndItStillWorks() throws Exception {
     ConnectorConfiguration cfg = loadFromResources("complete-config.yml");
     assertEquals("super-secret", cfg.getGitlab().getSharedSecretForHooks());
-    assertNotNull("not-really-a-token", cfg.getCircleCi().getApiToken());
+    assertEquals("not-really-a-token", cfg.getCircleCi().getApiToken());
     assertEquals(Map.of(123, "gh/ghorg/ghrepo"), cfg.getDomainMapping().getRepositories());
   }
 
   @Test
-  void theDefaultContainerConfigWorks() throws Exception {
-    ConnectorConfiguration cfg = loadFromResources("default-container-config.yml");
+  void theDefaultContainerConfigIsMissingEnvVariables() throws Exception {
+    assertThrows(
+        UndefinedEnvironmentVariableException.class,
+        () -> loadFromResources("default-container-config.yml"));
   }
 
   /**
