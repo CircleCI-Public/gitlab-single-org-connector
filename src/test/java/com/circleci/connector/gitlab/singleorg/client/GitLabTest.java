@@ -41,7 +41,7 @@ class GitLabTest {
 
     Mockito.when(mockRepositoryFileApi.getFile(PROJECT_ID, GitLab.CIRCLECI_CONFIG_PATH, REF))
         .thenReturn(mockRepositoryFile);
-    Mockito.when(mockRepositoryFile.getContent()).thenReturn(VALID_CONFIG_CONTENTS);
+    Mockito.when(mockRepositoryFile.getDecodedContentAsString()).thenReturn(VALID_CONFIG_CONTENTS);
 
     Optional<String> result = gitLab.fetchCircleCiConfig(PROJECT_ID, REF);
     assertEquals(Optional.of(VALID_CONFIG_CONTENTS), result);

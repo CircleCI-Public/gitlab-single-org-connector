@@ -29,7 +29,7 @@ public class GitLab {
           gitLabApi
               .getRepositoryFileApi()
               .getFile(projectId, CIRCLECI_CONFIG_PATH, ref)
-              .getContent());
+              .getDecodedContentAsString());
     } catch (GitLabApiException e) {
       LOGGER.warn("Error fetching CircleCI config", e);
     }
