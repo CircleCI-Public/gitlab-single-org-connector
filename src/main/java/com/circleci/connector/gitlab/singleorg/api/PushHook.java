@@ -73,6 +73,6 @@ public abstract class PushHook {
 
     @JsonProperty("git_ssh_url")
     @NotEmpty
-    abstract String gitSshUrl();
+    public abstract String gitSshUrl();
   }
 }
