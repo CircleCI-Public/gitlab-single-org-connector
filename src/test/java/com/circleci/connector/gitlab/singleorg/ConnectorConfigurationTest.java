@@ -21,6 +21,8 @@ class ConnectorConfigurationTest {
     assertNotNull(cfg.getGitlab());
     assertNotNull(cfg.getStatsd());
     assertNotNull(cfg.getDomainMapping());
+    assertNotNull(cfg.getDomainMapping().getRepositories());
+    assertNotNull(cfg.getDomainMapping().getSshFingerprints());
   }
 
   @Test
@@ -29,6 +31,9 @@ class ConnectorConfigurationTest {
     assertEquals("super-secret", cfg.getGitlab().getSharedSecretForHooks());
     assertEquals("not-really-a-token", cfg.getCircleCi().getApiToken());
     assertEquals(Map.of(123, "gh/ghorg/ghrepo"), cfg.getDomainMapping().getRepositories());
+    assertEquals(
+        Map.of(123, "aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa"),
+        cfg.getDomainMapping().getSshFingerprints());
   }
 
   @Test
