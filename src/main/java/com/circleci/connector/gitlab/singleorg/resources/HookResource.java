@@ -14,6 +14,7 @@ import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -99,9 +100,12 @@ public class HookResource {
       throw new NotFoundException("No project found with ID " + projectId);
     }
 
+    String sshFingerprint =
+        config.getDomainMapping().getSshFingerprints().getOrDefault(projectId, "");
+
     // Fetch the config from GitLab
-    Optional<String> config = gitLabClient.fetchCircleCiConfig(projectId, hook.ref());
-    if (config.isEmpty()) {
+    Optional<String> circleCiConfig = gitLabClient.fetchCircleCiConfig(projectId, hook.ref());
+    if (circleCiConfig.isEmpty()) {
       LOGGER.info("Ignoring hook referring to project id {} without config", projectId);
       return responseBuilder.status(HookResponse.Status.IGNORED).build();
     }
@@ -110,8 +114,14 @@ public class HookResource {
     PipelineLight pipeline;
     try {
       var params = new TriggerPipelineWithConfigParameters();
-      params.setConfig(config.get());
+      params.setConfig(circleCiConfig.get());
       params.setBranch(hook.branch());
+      params.setParameters(
+          Map.of(
+              "gitlab_ssh_fingerprint",
+              sshFingerprint,
+              "gitlab_git_uri",
+              hook.project().gitSshUrl()));
       pipeline = circleCiApi.triggerPipeline(projectSlug, params);
     } catch (ApiException e) {
       LOGGER.error("Failed to trigger pipeline", e);

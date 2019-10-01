@@ -12,3 +12,5 @@ statsd:
 domainMapping:
   repositories:
     123: gh/ghorg/ghrepo
+  sshFingerprints:
+    123: "aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa"

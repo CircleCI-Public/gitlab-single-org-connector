@@ -167,6 +167,7 @@ public class ConnectorConfiguration extends Configuration {
   public static class DomainMapping {
     private Map<@Range(min = 0) Integer, @Pattern(regexp = "[^/]+/[^/]+/[^/]+") String>
         repositories;
+    private Map<@Range(min = 0) Integer, String> sshFingerprints;
 
     public Map<Integer, String> getRepositories() {
       if (repositories == null) {
@@ -181,6 +182,17 @@ public class ConnectorConfiguration extends Configuration {
      */
     public void setRepositories(Map<Integer, String> repositories) {
       this.repositories = repositories;
+    }
+
+    public Map<Integer, String> getSshFingerprints() {
+      if (sshFingerprints == null) {
+        return new HashMap<>();
+      }
+      return sshFingerprints;
+    }
+
+    public void setSshFingerprints(Map<Integer, String> sshFingerprints) {
+      this.sshFingerprints = sshFingerprints;
     }
   }
 }
