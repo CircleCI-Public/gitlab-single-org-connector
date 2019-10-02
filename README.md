@@ -52,6 +52,25 @@ domainMapping:
     1000: gh/myorg/myrepo
 ```
 
+To be able to checkout code from the repo, an SSH that provides access to it
+has to be manually installed in CircleCI, and this key's fingerprint registered
+with the connector:
+
+```yaml
+domainMapping:
+  sshFingerprints:
+    1000: "aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa"
+```
+
+This allows you to use the `git-checkout` command in your CircleCI config YAML:
+```yaml
+version: 2.1
+jobs:
+  build:
+    steps:
+      - git-checkout # check out the code in the project directory
+```
+
 ## Logging
 
 By default, this service will log to standard output. To configure it further,
