@@ -1,0 +1,13 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: circleci/node:4.8.2
+    steps:
+      - git-checkout
+      - run: echo hello
+
+commands:
+  my-command:
+    steps:
+      - run: true

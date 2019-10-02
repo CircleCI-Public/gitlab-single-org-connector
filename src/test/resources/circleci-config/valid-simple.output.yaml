@@ -1,0 +1,23 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: circleci/node:4.8.2
+    steps:
+      - git-checkout
+      - run: echo hello
+parameters:
+  gitlab_git_uri:
+    type: "string"
+    default: ""
+  gitlab_ssh_fingerprint:
+    type: "string"
+    default: ""
+commands:
+  git-checkout:
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "<< pipeline.parameters.gitlab_ssh_fingerprint >>"
+      - run: "mkdir -p ~/.ssh\nssh-keyscan gitlab.com >> ~/.ssh/known_hosts\ngit clone\
+        \ --depth=1 << pipeline.parameters.gitlab_git_uri >> project"
