@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Optional;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
@@ -32,6 +33,18 @@ public class GitLab {
           + "      ssh-keyscan gitlab.com >> ~/.ssh/known_hosts\n"
           + "      git clone --depth=1 << pipeline.parameters.gitlab_git_uri >> project";
 
+  private static final JsonNode STRING_PARAMETER_NODE;
+  private static final JsonNode GIT_CHECKOUT_COMMAND_NODE;
+
+  static {
+    try {
+      STRING_PARAMETER_NODE = YAML_MAPPER.readTree(STRING_PARAMETER_YAML);
+      GIT_CHECKOUT_COMMAND_NODE = YAML_MAPPER.readTree(GIT_CHECKOUT_COMMAND_YAML);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
   /**
    * Extends the given CircleCI config with a git-checkout command and gitlab_ssh_fingerprint and
    * gitlab_git_uri pipeline parameters
@@ -48,18 +61,15 @@ public class GitLab {
         rootNode = (ObjectNode) root;
       }
 
-      JsonNode stringParameterNode = YAML_MAPPER.readTree(STRING_PARAMETER_YAML);
-      JsonNode gitCheckoutCommandNode = YAML_MAPPER.readTree(GIT_CHECKOUT_COMMAND_YAML);
-
       ObjectNode parametersNode = rootNode.with("parameters");
       ObjectNode commandsNode = rootNode.with("commands");
 
-      parametersNode.set("gitlab_ssh_fingerprint", stringParameterNode);
-      parametersNode.set("gitlab_git_uri", stringParameterNode);
-      commandsNode.set("git-checkout", gitCheckoutCommandNode);
+      parametersNode.set("gitlab_ssh_fingerprint", STRING_PARAMETER_NODE);
+      parametersNode.set("gitlab_git_uri", STRING_PARAMETER_NODE);
+      commandsNode.set("git-checkout", GIT_CHECKOUT_COMMAND_NODE);
 
       return rootNode;
-    } catch (IOException | ClassCastException e) {
+    } catch (ClassCastException e) {
       LOGGER.warn("Error parsing CircleCI config", e);
       return null;
     }
