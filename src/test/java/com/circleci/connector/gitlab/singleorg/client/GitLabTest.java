@@ -2,7 +2,6 @@ package com.circleci.connector.gitlab.singleorg.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,7 +35,11 @@ class GitLabTest {
   }
 
   private static ObjectNode readCircleCIConfigAsObjectNode(String filename) throws IOException {
-    return (ObjectNode) YAML_MAPPER.readTree(readCircleCIConfigAsString(filename));
+    return readYamlAsObject(readCircleCIConfigAsString(filename));
+  }
+
+  private static ObjectNode readYamlAsObject(String yaml) throws IOException {
+    return (ObjectNode) YAML_MAPPER.readTree(yaml);
   }
 
   @BeforeEach
@@ -47,7 +50,7 @@ class GitLabTest {
   @Test
   void extendEmptyCircleCiConfig() throws IOException {
     ObjectNode expected = readCircleCIConfigAsObjectNode("empty.output.yaml");
-    ObjectNode result = gitLab.extendCircleCiConfig(YAML_MAPPER.readTree(""));
+    ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(""));
     assertEquals(expected, result);
   }
 
@@ -55,7 +58,7 @@ class GitLabTest {
   void extendValidCircleCiConfigWithoutParametersOrCommands() throws IOException {
     ObjectNode expected = readCircleCIConfigAsObjectNode("valid-simple.output.yaml");
     String config = readCircleCIConfigAsString("valid-simple.input.yaml");
-    ObjectNode result = gitLab.extendCircleCiConfig(YAML_MAPPER.readTree(config));
+    ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(config));
     assertEquals(expected, result);
   }
 
@@ -63,7 +66,7 @@ class GitLabTest {
   void extendValidCircleCiConfigWithParameters() throws IOException {
     ObjectNode expected = readCircleCIConfigAsObjectNode("valid-parameters.output.yaml");
     String config = readCircleCIConfigAsString("valid-parameters.input.yaml");
-    ObjectNode result = gitLab.extendCircleCiConfig(YAML_MAPPER.readTree(config));
+    ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(config));
     assertEquals(expected, result);
   }
 
@@ -71,15 +74,8 @@ class GitLabTest {
   void extendValidCircleCiConfigWithCommand() throws IOException {
     ObjectNode expected = readCircleCIConfigAsObjectNode("valid-commands.output.yaml");
     String config = readCircleCIConfigAsString("valid-commands.input.yaml");
-    ObjectNode result = gitLab.extendCircleCiConfig(YAML_MAPPER.readTree(config));
+    ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(config));
     assertEquals(expected, result);
-  }
-
-  @Test
-  void extendInvalidCircleCiConfigFails() throws IOException {
-    String config = readCircleCIConfigAsString("invalid.input.yaml");
-    ObjectNode result = gitLab.extendCircleCiConfig(YAML_MAPPER.readTree(config));
-    assertNull(result);
   }
 
   @Test
@@ -112,6 +108,19 @@ class GitLabTest {
         .thenReturn(mockRepositoryFile);
     Mockito.when(mockRepositoryFile.getDecodedContentAsString())
         .thenReturn(readCircleCIConfigAsString("bad-yaml.input.yaml"));
+
+    Optional<String> result = gitLab.fetchCircleCiConfig(PROJECT_ID, REF);
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void fetchNonObjectYamlError() throws GitLabApiException, IOException {
+    RepositoryFile mockRepositoryFile = Mockito.mock(RepositoryFile.class);
+
+    Mockito.when(mockRepositoryFileApi.getFile(PROJECT_ID, GitLab.CIRCLECI_CONFIG_PATH, REF))
+        .thenReturn(mockRepositoryFile);
+    Mockito.when(mockRepositoryFile.getDecodedContentAsString())
+        .thenReturn(readCircleCIConfigAsString("non-object.input.yaml"));
 
     Optional<String> result = gitLab.fetchCircleCiConfig(PROJECT_ID, REF);
     assertTrue(result.isEmpty());
