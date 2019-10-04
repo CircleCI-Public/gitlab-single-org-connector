@@ -116,6 +116,7 @@ public class HookResource {
       var params = new TriggerPipelineWithConfigParameters();
       params.setConfig(circleCiConfig.get());
       params.setBranch(hook.branch());
+      params.setRevision(hook.after());
       params.setParameters(
           Map.of(
               "gitlab_ssh_fingerprint",
@@ -170,6 +171,8 @@ public class HookResource {
   static class TriggerPipelineWithConfigParameters extends TriggerPipelineParameters {
     @JsonProperty private String config;
 
+    @JsonProperty private String revision;
+
     @Nullable
     public String getConfig() {
       return config;
@@ -177,6 +180,15 @@ public class HookResource {
 
     public void setConfig(String cfg) {
       config = cfg;
+    }
+
+    @Nullable
+    public String getRevision() {
+      return revision;
+    }
+
+    public void setRevision(String rev) {
+      revision = rev;
     }
   }
 

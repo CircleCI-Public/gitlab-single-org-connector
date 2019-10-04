@@ -41,7 +41,7 @@ public abstract class PushHook {
   abstract String before();
 
   @NotEmpty
-  abstract String after();
+  public abstract String after();
 
   @NotEmpty
   public abstract String ref();
