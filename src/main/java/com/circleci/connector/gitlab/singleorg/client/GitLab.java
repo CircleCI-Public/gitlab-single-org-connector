@@ -1,11 +1,13 @@
 package com.circleci.connector.gitlab.singleorg.client;
 
-import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Optional;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
@@ -32,6 +34,18 @@ public class GitLab {
           + "      ssh-keyscan gitlab.com >> ~/.ssh/known_hosts\n"
           + "      git clone --depth=1 << pipeline.parameters.gitlab_git_uri >> project";
 
+  private static final JsonNode STRING_PARAMETER_NODE;
+  private static final JsonNode GIT_CHECKOUT_COMMAND_NODE;
+
+  static {
+    try {
+      STRING_PARAMETER_NODE = YAML_MAPPER.readTree(STRING_PARAMETER_YAML);
+      GIT_CHECKOUT_COMMAND_NODE = YAML_MAPPER.readTree(GIT_CHECKOUT_COMMAND_YAML);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
   /**
    * Extends the given CircleCI config with a git-checkout command and gitlab_ssh_fingerprint and
    * gitlab_git_uri pipeline parameters
@@ -39,31 +53,25 @@ public class GitLab {
    * @param root root node of the YAML config
    * @return The config extended with the git-checkout command and git-related parameters
    */
-  ObjectNode extendCircleCiConfig(TreeNode root) {
-    try {
-      ObjectNode rootNode;
-      if (root == null) {
-        rootNode = YAML_MAPPER.createObjectNode();
-      } else {
-        rootNode = (ObjectNode) root;
-      }
-
-      JsonNode stringParameterNode = YAML_MAPPER.readTree(STRING_PARAMETER_YAML);
-      JsonNode gitCheckoutCommandNode = YAML_MAPPER.readTree(GIT_CHECKOUT_COMMAND_YAML);
-
-      ObjectNode parametersNode = rootNode.with("parameters");
-      ObjectNode commandsNode = rootNode.with("commands");
-
-      parametersNode.set("gitlab_ssh_fingerprint", stringParameterNode);
-      parametersNode.set("gitlab_git_uri", stringParameterNode);
-      commandsNode.set("git-checkout", gitCheckoutCommandNode);
-
-      return rootNode;
-    } catch (IOException | ClassCastException e) {
-      LOGGER.warn("Error parsing CircleCI config", e);
-      return null;
+  @VisibleForTesting
+  ObjectNode extendCircleCiConfig(ObjectNode root) {
+    ObjectNode rootNode;
+    if (root == null) {
+      rootNode = YAML_MAPPER.createObjectNode();
+    } else {
+      rootNode = root;
     }
+
+    ObjectNode parametersNode = rootNode.with("parameters");
+    ObjectNode commandsNode = rootNode.with("commands");
+
+    parametersNode.set("gitlab_ssh_fingerprint", STRING_PARAMETER_NODE);
+    parametersNode.set("gitlab_git_uri", STRING_PARAMETER_NODE);
+    commandsNode.set("git-checkout", GIT_CHECKOUT_COMMAND_NODE);
+
+    return rootNode;
   }
+
   /**
    * Get CircleCI config contents from GitLab project at ref
    *
@@ -79,14 +87,43 @@ public class GitLab {
               .getFile(projectId, CIRCLECI_CONFIG_PATH, ref)
               .getDecodedContentAsString();
 
-      ObjectNode rootNode = (ObjectNode) YAML_MAPPER.readTree(config);
-      return Optional.ofNullable(
-          YAML_MAPPER.writer().writeValueAsString(extendCircleCiConfig(rootNode)));
+      return readYamlAsObject(config)
+          .map(this::extendCircleCiConfig)
+          .map(this::safeWriteValueAsString);
     } catch (GitLabApiException e) {
       LOGGER.warn("Error fetching CircleCI config", e);
-    } catch (IOException e) {
-      LOGGER.warn("Error reading CircleCI config", e);
     }
     return Optional.empty();
+  }
+
+  /**
+   * Reads a YAML string as an {@link ObjectNode}. If parsing fails or the YAML does not represent
+   * an object, returns {@code Optional.empty}.
+   *
+   * @param yaml the YAML string to parse
+   * @return the parsed {@code ObjectNode}
+   */
+  private Optional<ObjectNode> readYamlAsObject(String yaml) {
+    try {
+      ObjectNode objectNode = (ObjectNode) YAML_MAPPER.readTree(yaml);
+      return Optional.of(objectNode);
+    } catch (ClassCastException | IOException e) {
+      LOGGER.warn("Error parsing CircleCI config", e);
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Writes an {@link ObjectNode} value as a YAML string.
+   *
+   * <p>Provides an unchecked alternative to {@link ObjectMapper#writeValueAsString}.
+   */
+  private String safeWriteValueAsString(ObjectNode objectNode) {
+    try {
+      return YAML_MAPPER.writer().writeValueAsString(objectNode);
+    } catch (JsonProcessingException e) {
+      LOGGER.error("Unexpected error writing CircleCI config to String", e);
+      return null;
+    }
   }
 }
