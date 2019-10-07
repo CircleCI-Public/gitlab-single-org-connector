@@ -33,7 +33,7 @@ gitlab:
   authToken: "my-auth-token"
 ```
 
-If that configuration item is not set, no validation will be done. If it _is_
+If that configuration item is not set, no validation will be done. If it is
 set then it is required to be present and any hook that does not set the
 header will be given a `403 Forbidden` response.
 
