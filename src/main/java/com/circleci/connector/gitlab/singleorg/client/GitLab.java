@@ -32,7 +32,8 @@ public class GitLab {
           + "  - run: |\n"
           + "      mkdir -p ~/.ssh\n"
           + "      ssh-keyscan gitlab.com >> ~/.ssh/known_hosts\n"
-          + "      git clone --depth=1 << pipeline.parameters.gitlab_git_uri >> project";
+          + "      git clone --single-branch --branch $CIRCLE_BRANCH "
+          + "        --depth=1 << pipeline.parameters.gitlab_git_uri >> project";
 
   private static final JsonNode STRING_PARAMETER_NODE;
   private static final JsonNode GIT_CHECKOUT_COMMAND_NODE;
