@@ -20,4 +20,4 @@ commands:
           fingerprints:
             - "<< pipeline.parameters.gitlab_ssh_fingerprint >>"
       - run: "mkdir -p ~/.ssh\nssh-keyscan gitlab.com >> ~/.ssh/known_hosts\ngit clone\
-        \ --depth=1 << pipeline.parameters.gitlab_git_uri >> project"
+        \ --single-branch --branch $CIRCLE_BRANCH         --depth=1 << pipeline.parameters.gitlab_git_uri >> project"
