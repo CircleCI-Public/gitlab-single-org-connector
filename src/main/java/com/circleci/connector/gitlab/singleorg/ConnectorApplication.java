@@ -77,9 +77,13 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
     GitLabApi gitLabApi = gitLabApi(config);
     GitLab gitLab = new GitLab(gitLabApi);
 
+    var scheduledJobRunner =
+        environment.lifecycle().scheduledExecutorService("scheduled-job-%d", true).build();
     environment.healthChecks().register("CircleCI API", new CircleCiApiHealthCheck(circleCiApi));
     environment.healthChecks().register("GitLab API", new GitLabApiHealthCheck(gitLabApi));
-    environment.jersey().register(new HookResource(gitLab, circleCiApi, config));
+    environment
+        .jersey()
+        .register(new HookResource(gitLab, circleCiApi, scheduledJobRunner, config));
 
     maybeConfigureStatsdMetrics(config, environment.metrics());
   }

@@ -17,6 +17,7 @@ import io.dropwizard.jackson.Jackson;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ScheduledExecutorService;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.BadRequestException;
@@ -50,14 +51,21 @@ public class HookResource {
   /** The configuration for this service. */
   @NotNull private final ConnectorConfiguration config;
 
+  @NotNull private final ScheduledExecutorService scheduledJobRunner;
+
   /**
    * @param gitLabClient A configured GitLab API client.
    * @param circleCiApi The CircleCI API library, configured to call the CircleCI REST API.
    * @param config The configuration for this service.
    */
-  public HookResource(GitLab gitLabClient, DefaultApi circleCiApi, ConnectorConfiguration config) {
+  public HookResource(
+      GitLab gitLabClient,
+      DefaultApi circleCiApi,
+      ScheduledExecutorService scheduledJobRunner,
+      ConnectorConfiguration config) {
     this.gitLabClient = gitLabClient;
     this.circleCiApi = circleCiApi;
+    this.scheduledJobRunner = scheduledJobRunner;
     this.config = config;
   }
 
