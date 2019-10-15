@@ -21,6 +21,7 @@ import io.dropwizard.testing.FixtureHelpers;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ScheduledExecutorService;
 import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.WebApplicationException;
@@ -39,6 +40,7 @@ class HookResourceTest {
   private static final DefaultApi CIRCLECI_404;
   private static final DefaultApi CIRCLECI_404_JSON;
   private static final DefaultApi CIRCLECI_500;
+  private static final ScheduledExecutorService JOB_RUNNER;
 
   static {
     EMPTY_CONFIG = configFromString("{}");
@@ -88,6 +90,8 @@ class HookResourceTest {
     } catch (ApiException e) {
       // Ignore when mocking
     }
+
+    JOB_RUNNER = mock(ScheduledExecutorService.class);
   }
 
   private static ConnectorConfiguration configFromString(String config) {
@@ -100,69 +104,72 @@ class HookResourceTest {
 
   @Test
   void withNoMappedRepositoriesWeReturn404() {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, EMPTY_CONFIG);
+    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, EMPTY_CONFIG);
     assertThrows(
         NotFoundException.class, () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null));
   }
 
   @Test
   void ifCircleCiReturns4xxWePassItOn() {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_404, MINIMAL_CONFIG);
+    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_404, JOB_RUNNER, MINIMAL_CONFIG);
     assertThrows(
         ClientErrorException.class, () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null));
   }
 
   @Test
   void ifCircleCiReturns4xxWithAJsonMessageWePassItOn() {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_404_JSON, MINIMAL_CONFIG);
+    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_404_JSON, JOB_RUNNER, MINIMAL_CONFIG);
     assertThrows(
         ClientErrorException.class, () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null));
   }
 
   @Test
   void ifCircleCiReturns500WeThrowTheSameException() {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_500, MINIMAL_CONFIG);
+    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_500, JOB_RUNNER, MINIMAL_CONFIG);
     assertThrows(ApiException.class, () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null));
   }
 
   @Test
   void weCanProcessTheHookFromGitlabDocs() throws Exception {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, MINIMAL_CONFIG);
+    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, MINIMAL_CONFIG);
     HookResponse response = hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null);
     assertEquals(HookResponse.Status.SUBMITTED, response.status());
   }
 
   @Test
   void weCanProcessTheHookFromGitlabDocsWhenItSuppliesATokenAndWeAgree() throws Exception {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, CONFIG_WITH_SECRET);
+    HookResource hr =
+        new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, CONFIG_WITH_SECRET);
     HookResponse response = hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", "super-secret");
     assertEquals(HookResponse.Status.SUBMITTED, response.status());
   }
 
   @Test
   void weCanProcessTheHookFromGitlabDocsWhenItSuppliesATokenAndWeDoNotCare() throws Exception {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, MINIMAL_CONFIG);
+    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, MINIMAL_CONFIG);
     HookResponse response = hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", "token-for-us-to-ignore");
     assertEquals(HookResponse.Status.SUBMITTED, response.status());
   }
 
   @Test
   void ignoreTheHookWhenWeCannotFindACircleCIConfig() throws Exception {
-    HookResource hr = new HookResource(GITLAB_SAD, CIRCLECI_HAPPY, MINIMAL_CONFIG);
+    HookResource hr = new HookResource(GITLAB_SAD, CIRCLECI_HAPPY, JOB_RUNNER, MINIMAL_CONFIG);
     HookResponse response = hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", "token-for-us-to-ignore");
     assertEquals(HookResponse.Status.IGNORED, response.status());
   }
 
   @Test
   void weThrowA403IfTheGitlabTokenIsNotSupplied() throws Exception {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, CONFIG_WITH_SECRET);
+    HookResource hr =
+        new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, CONFIG_WITH_SECRET);
     assertThrows(
         WebApplicationException.class, () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null));
   }
 
   @Test
   void weThrowA403IfTheGitlabTokenDoesNotMatch() throws Exception {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, CONFIG_WITH_SECRET);
+    HookResource hr =
+        new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, CONFIG_WITH_SECRET);
     assertThrows(
         WebApplicationException.class,
         () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", "wrong-token"));
@@ -170,7 +177,7 @@ class HookResourceTest {
 
   @Test
   void nonPushHookTypesReturnIgnored() throws Exception {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, MINIMAL_CONFIG);
+    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, MINIMAL_CONFIG);
     List<String> nonPushHookTypes =
         Arrays.asList(
             "Tag Push Hook",
@@ -188,7 +195,7 @@ class HookResourceTest {
 
   @Test
   void ifThereIsNoGitlabEventHeaderWeThrow400() throws Exception {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, MINIMAL_CONFIG);
+    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, MINIMAL_CONFIG);
     assertThrows(WebApplicationException.class, () -> hr.processHook("{}", null, null));
   }
 }
