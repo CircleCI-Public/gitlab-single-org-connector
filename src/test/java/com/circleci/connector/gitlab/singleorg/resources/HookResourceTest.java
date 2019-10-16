@@ -8,12 +8,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.circleci.client.v2.ApiException;
-import com.circleci.client.v2.api.DefaultApi;
 import com.circleci.client.v2.model.PipelineLight;
-import com.circleci.client.v2.model.TriggerPipelineParameters;
 import com.circleci.connector.gitlab.singleorg.ConnectorConfiguration;
 import com.circleci.connector.gitlab.singleorg.api.HookResponse;
+import com.circleci.connector.gitlab.singleorg.client.CircleCi;
 import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
@@ -22,8 +20,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
-import javax.ws.rs.ClientErrorException;
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.WebApplicationException;
 import org.junit.jupiter.api.Test;
 
@@ -36,10 +32,8 @@ class HookResourceTest {
       FixtureHelpers.fixture("gitlab-push-hook-from-docs.json");
   private static final GitLab GITLAB_HAPPY;
   private static final GitLab GITLAB_SAD;
-  private static final DefaultApi CIRCLECI_HAPPY;
-  private static final DefaultApi CIRCLECI_404;
-  private static final DefaultApi CIRCLECI_404_JSON;
-  private static final DefaultApi CIRCLECI_500;
+  private static final CircleCi CIRCLECI_HAPPY;
+  private static final CircleCi CIRCLECI_SAD;
   private static final ScheduledExecutorService JOB_RUNNER;
 
   static {
@@ -74,22 +68,14 @@ class HookResourceTest {
     GITLAB_SAD = mock(GitLab.class);
     when(GITLAB_SAD.fetchCircleCiConfig(anyInt(), anyString())).thenReturn(Optional.empty());
 
-    CIRCLECI_HAPPY = mock(DefaultApi.class);
-    CIRCLECI_404 = mock(DefaultApi.class);
-    CIRCLECI_404_JSON = mock(DefaultApi.class);
-    CIRCLECI_500 = mock(DefaultApi.class);
-    try {
-      when(CIRCLECI_HAPPY.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
-          .thenReturn(new PipelineLight());
-      when(CIRCLECI_404.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
-          .thenThrow(new ApiException(404, "No such project"));
-      when(CIRCLECI_404_JSON.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
-          .thenThrow(new ApiException(404, "{\"message\":\"No such project\"}"));
-      when(CIRCLECI_500.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
-          .thenThrow(new ApiException(500, "CircleCI is broken"));
-    } catch (ApiException e) {
-      // Ignore when mocking
-    }
+    CIRCLECI_HAPPY = mock(CircleCi.class);
+    CIRCLECI_SAD = mock(CircleCi.class);
+    when(CIRCLECI_HAPPY.triggerPipeline(
+            any(Optional.class), anyString(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(new PipelineLight());
+    when(CIRCLECI_SAD.triggerPipeline(
+            any(Optional.class), anyString(), anyString(), anyString(), anyString(), anyString()))
+        .thenThrow(new RuntimeException("bad things happened"));
 
     JOB_RUNNER = mock(ScheduledExecutorService.class);
   }
@@ -100,33 +86,6 @@ class HookResourceTest {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  @Test
-  void withNoMappedRepositoriesWeReturn404() {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, EMPTY_CONFIG);
-    assertThrows(
-        NotFoundException.class, () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null));
-  }
-
-  @Test
-  void ifCircleCiReturns4xxWePassItOn() {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_404, JOB_RUNNER, MINIMAL_CONFIG);
-    assertThrows(
-        ClientErrorException.class, () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null));
-  }
-
-  @Test
-  void ifCircleCiReturns4xxWithAJsonMessageWePassItOn() {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_404_JSON, JOB_RUNNER, MINIMAL_CONFIG);
-    assertThrows(
-        ClientErrorException.class, () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null));
-  }
-
-  @Test
-  void ifCircleCiReturns500WeThrowTheSameException() {
-    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_500, JOB_RUNNER, MINIMAL_CONFIG);
-    assertThrows(ApiException.class, () -> hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null));
   }
 
   @Test

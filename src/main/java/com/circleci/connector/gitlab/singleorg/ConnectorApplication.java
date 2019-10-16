@@ -3,6 +3,7 @@ package com.circleci.connector.gitlab.singleorg;
 import com.circleci.client.v2.ApiClient;
 import com.circleci.client.v2.Configuration;
 import com.circleci.client.v2.api.DefaultApi;
+import com.circleci.connector.gitlab.singleorg.client.CircleCi;
 import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.circleci.connector.gitlab.singleorg.health.CircleCiApiHealthCheck;
 import com.circleci.connector.gitlab.singleorg.health.GitLabApiHealthCheck;
@@ -74,6 +75,7 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
    */
   public void run(ConnectorConfiguration config, Environment environment) {
     DefaultApi circleCiApi = circleCiClient(config);
+    CircleCi circleCi = new CircleCi(circleCiApi);
     GitLabApi gitLabApi = gitLabApi(config);
     GitLab gitLab = new GitLab(gitLabApi);
 
@@ -81,9 +83,7 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
         environment.lifecycle().scheduledExecutorService("scheduled-job-%d", true).build();
     environment.healthChecks().register("CircleCI API", new CircleCiApiHealthCheck(circleCiApi));
     environment.healthChecks().register("GitLab API", new GitLabApiHealthCheck(gitLabApi));
-    environment
-        .jersey()
-        .register(new HookResource(gitLab, circleCiApi, scheduledJobRunner, config));
+    environment.jersey().register(new HookResource(gitLab, circleCi, scheduledJobRunner, config));
 
     maybeConfigureStatsdMetrics(config, environment.metrics());
   }

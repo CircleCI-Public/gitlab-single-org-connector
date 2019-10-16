@@ -2,8 +2,6 @@ package com.circleci.connector.gitlab.singleorg.client;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import com.circleci.client.v2.ApiException;
-import com.circleci.client.v2.api.DefaultApi;
 import com.circleci.client.v2.model.PipelineLight;
 import com.circleci.client.v2.model.PipelineWithWorkflows;
 import com.google.common.annotations.VisibleForTesting;
@@ -26,7 +24,7 @@ public class PipelineStatusPoller {
   private final PipelineLight pipeline;
 
   /** The CircleCI client for calling the CircleCI API. */
-  private final DefaultApi circleCi;
+  private final CircleCi circleCi;
 
   /** The GitLab client for calling the the GitLab API. */
   private final GitLab gitLab;
@@ -40,7 +38,7 @@ public class PipelineStatusPoller {
   public PipelineStatusPoller(
       int projectId,
       PipelineLight pipeline,
-      DefaultApi circleCi,
+      CircleCi circleCi,
       GitLab gitLab,
       ScheduledExecutorService jobRunner) {
     this.projectId = projectId;
@@ -68,7 +66,7 @@ public class PipelineStatusPoller {
     PipelineWithWorkflows p;
     try {
       p = circleCi.getPipelineById(pipeline.getId());
-    } catch (ApiException e) {
+    } catch (RuntimeException e) {
       LOGGER.error(
           "Caught error while polling for the status of CircleCI pipeline {}", pipeline.getId(), e);
       return retryPolicy.delayFor(null);

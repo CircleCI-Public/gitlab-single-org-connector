@@ -6,7 +6,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.circleci.client.v2.ApiException;
-import com.circleci.client.v2.api.DefaultApi;
 import com.circleci.client.v2.model.PipelineLight;
 import com.circleci.client.v2.model.PipelineWithWorkflows;
 import com.circleci.client.v2.model.PipelineWithWorkflowsVcs;
@@ -16,7 +15,7 @@ import org.gitlab4j.api.Constants.CommitBuildState;
 import org.junit.jupiter.api.Test;
 
 class PipelineStatusPollerTest {
-  private static final DefaultApi CIRCLECI = mock(DefaultApi.class);
+  private static final CircleCi CIRCLECI = mock(CircleCi.class);
   private static final GitLab GITLAB = mock(GitLab.class);
   private static final ScheduledExecutorService JOB_RUNNER = mock(ScheduledExecutorService.class);
 
@@ -26,7 +25,7 @@ class PipelineStatusPollerTest {
     int projectId = 123456;
     PipelineLight pipeline = (new PipelineLight()).id(pipelineId);
 
-    when(CIRCLECI.getPipelineById(pipelineId)).thenThrow(new ApiException());
+    when(CIRCLECI.getPipelineById(pipelineId)).thenThrow(new RuntimeException());
     PipelineStatusPoller poller =
         new PipelineStatusPoller(projectId, pipeline, CIRCLECI, GITLAB, JOB_RUNNER);
     assertTrue(poller.poll() > 0);
