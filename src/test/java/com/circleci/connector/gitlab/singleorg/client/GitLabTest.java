@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.circleci.client.v2.model.PipelineWithWorkflows;
+import com.circleci.client.v2.model.PipelineWithWorkflows.StateEnum;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -11,13 +13,20 @@ import io.dropwizard.util.Resources;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import org.gitlab4j.api.CommitsApi;
+import org.gitlab4j.api.Constants.CommitBuildState;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.RepositoryFileApi;
+import org.gitlab4j.api.models.CommitStatus;
 import org.gitlab4j.api.models.RepositoryFile;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 class GitLabTest {
@@ -27,7 +36,20 @@ class GitLabTest {
 
   private GitLabApi mockGitLabApi = Mockito.mock(GitLabApi.class);
   private RepositoryFileApi mockRepositoryFileApi = Mockito.mock(RepositoryFileApi.class);
+  private CommitsApi mockCommitsApi = Mockito.mock(CommitsApi.class);
   private GitLab gitLab = new GitLab(mockGitLabApi);
+
+  private static PipelineWithWorkflows loadYamlAsPipelineWithWorkflows(String filename)
+      throws IOException {
+    URL resource =
+        Resources.getResource(String.format("circleci-api/pipeline-with-workflows/%s", filename));
+    return YAML_MAPPER.readValue(resource, PipelineWithWorkflows.class);
+  }
+
+  private static CommitStatus loadYamlAsCommitStatus(String filename) throws IOException {
+    URL resource = Resources.getResource(String.format("gitlab-api/commit-status/%s", filename));
+    return YAML_MAPPER.readValue(resource, CommitStatus.class);
+  }
 
   private static String readCircleCIConfigAsString(String filename) throws IOException {
     URL resource = Resources.getResource(String.format("circleci-config/%s", filename));
@@ -45,6 +67,39 @@ class GitLabTest {
   @BeforeEach
   void setUp() {
     Mockito.when(mockGitLabApi.getRepositoryFileApi()).thenReturn(mockRepositoryFileApi);
+    Mockito.when(mockGitLabApi.getCommitsApi()).thenReturn(mockCommitsApi);
+  }
+
+  @Test
+  void updateRunningCommitStatus() throws GitLabApiException, IOException {
+    int PROJECT_ID = 1;
+    PipelineWithWorkflows pipeline = loadYamlAsPipelineWithWorkflows("running.yaml");
+    CommitStatus commitStatus = loadYamlAsCommitStatus("running.yaml");
+
+    gitLab.updateCommitStatus(PROJECT_ID, pipeline);
+    Mockito.verify(mockCommitsApi, Mockito.times(1))
+        .addCommitStatus(
+            ArgumentMatchers.eq(PROJECT_ID),
+            ArgumentMatchers.eq("6789"),
+            ArgumentMatchers.eq(CommitBuildState.RUNNING),
+            ArgumentMatchers.refEq(commitStatus));
+  }
+
+  @Test
+  void updateBadCommitStatus() throws GitLabApiException, IOException {
+    int PROJECT_ID = 1;
+    PipelineWithWorkflows pipeline = loadYamlAsPipelineWithWorkflows("no-state.yaml");
+    pipeline.setState(null);
+
+    gitLab.updateCommitStatus(PROJECT_ID, pipeline);
+    Mockito.verify(mockCommitsApi, Mockito.never())
+        .addCommitStatus(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+  }
+
+  @Test
+  void allCircleCiStatesCovered() {
+    List<StateEnum> states = Arrays.asList(StateEnum.values());
+    assertEquals(new HashSet<>(states), GitLab.CIRCLECI_TO_GITLAB_STATE_MAP.keySet());
   }
 
   @Test
