@@ -8,17 +8,20 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.circleci.client.v2.model.PipelineLight;
 import com.circleci.connector.gitlab.singleorg.ConnectorConfiguration;
 import com.circleci.connector.gitlab.singleorg.api.HookResponse;
 import com.circleci.connector.gitlab.singleorg.client.CircleCi;
 import com.circleci.connector.gitlab.singleorg.client.GitLab;
+import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.testing.FixtureHelpers;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.ws.rs.WebApplicationException;
 import org.junit.jupiter.api.Test;
@@ -71,10 +74,10 @@ class HookResourceTest {
     CIRCLECI_HAPPY = mock(CircleCi.class);
     CIRCLECI_SAD = mock(CircleCi.class);
     when(CIRCLECI_HAPPY.triggerPipeline(
-            any(Optional.class), anyString(), anyString(), anyString(), anyString(), anyString()))
-        .thenReturn(new PipelineLight());
+            any(Pipeline.class), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(ImmutablePipeline.of(UUID.randomUUID(), 43, State.RUNNING, "abcd", "master"));
     when(CIRCLECI_SAD.triggerPipeline(
-            any(Optional.class), anyString(), anyString(), anyString(), anyString(), anyString()))
+            any(Pipeline.class), anyString(), anyString(), anyString(), anyString()))
         .thenThrow(new RuntimeException("bad things happened"));
 
     JOB_RUNNER = mock(ScheduledExecutorService.class);

@@ -1,6 +1,6 @@
 package com.circleci.connector.gitlab.singleorg.api;
 
-import com.circleci.client.v2.model.PipelineLight;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline;
 import com.circleci.connector.gitlab.singleorg.resources.HookResource;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.UUID;
@@ -23,5 +23,5 @@ public abstract class HookResponse {
 
   @JsonProperty
   @Nullable
-  public abstract PipelineLight pipeline();
+  public abstract Pipeline pipeline();
 }

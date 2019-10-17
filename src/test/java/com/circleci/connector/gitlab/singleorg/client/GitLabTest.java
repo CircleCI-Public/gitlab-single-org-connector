@@ -4,8 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.circleci.client.v2.model.PipelineWithWorkflows;
-import com.circleci.client.v2.model.PipelineWithWorkflows.StateEnum;
+import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -17,6 +18,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.gitlab4j.api.CommitsApi;
 import org.gitlab4j.api.Constants.CommitBuildState;
 import org.gitlab4j.api.GitLabApi;
@@ -39,11 +41,9 @@ class GitLabTest {
   private CommitsApi mockCommitsApi = Mockito.mock(CommitsApi.class);
   private GitLab gitLab = new GitLab(mockGitLabApi);
 
-  private static PipelineWithWorkflows loadYamlAsPipelineWithWorkflows(String filename)
-      throws IOException {
-    URL resource =
-        Resources.getResource(String.format("circleci-api/pipeline-with-workflows/%s", filename));
-    return YAML_MAPPER.readValue(resource, PipelineWithWorkflows.class);
+  private static Pipeline loadYamlAsPipeline(String filename) throws IOException {
+    URL resource = Resources.getResource(String.format("model/pipeline/%s", filename));
+    return YAML_MAPPER.readValue(resource, Pipeline.class);
   }
 
   private static CommitStatus loadYamlAsCommitStatus(String filename) throws IOException {
@@ -72,11 +72,16 @@ class GitLabTest {
 
   @Test
   void updateRunningCommitStatus() throws GitLabApiException, IOException {
-    int PROJECT_ID = 1;
-    PipelineWithWorkflows pipeline = loadYamlAsPipelineWithWorkflows("running.yaml");
+    Pipeline pipeline =
+        ImmutablePipeline.of(
+            UUID.fromString("56283657-2b1c-4135-a6b2-acd65311bf3d"),
+            PROJECT_ID,
+            State.RUNNING,
+            "6789",
+            "master");
     CommitStatus commitStatus = loadYamlAsCommitStatus("running.yaml");
 
-    gitLab.updateCommitStatus(PROJECT_ID, pipeline);
+    gitLab.updateCommitStatus(pipeline);
     Mockito.verify(mockCommitsApi, Mockito.times(1))
         .addCommitStatus(
             ArgumentMatchers.eq(PROJECT_ID),
@@ -86,20 +91,9 @@ class GitLabTest {
   }
 
   @Test
-  void updateBadCommitStatus() throws GitLabApiException, IOException {
-    int PROJECT_ID = 1;
-    PipelineWithWorkflows pipeline = loadYamlAsPipelineWithWorkflows("no-state.yaml");
-    pipeline.setState(null);
-
-    gitLab.updateCommitStatus(PROJECT_ID, pipeline);
-    Mockito.verify(mockCommitsApi, Mockito.never())
-        .addCommitStatus(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
-  }
-
-  @Test
-  void allCircleCiStatesCovered() {
-    List<StateEnum> states = Arrays.asList(StateEnum.values());
-    assertEquals(new HashSet<>(states), GitLab.CIRCLECI_TO_GITLAB_STATE_MAP.keySet());
+  void allStatesCovered() {
+    List<State> states = Arrays.asList(State.values());
+    assertEquals(new HashSet<>(states), GitLab.PIPELINE_TO_GITLAB_STATE_MAP.keySet());
   }
 
   @Test

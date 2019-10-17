@@ -6,12 +6,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.circleci.client.v2.ApiException;
-import com.circleci.client.v2.model.PipelineLight;
-import com.circleci.client.v2.model.PipelineWithWorkflows;
-import com.circleci.client.v2.model.PipelineWithWorkflowsVcs;
+import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
-import org.gitlab4j.api.Constants.CommitBuildState;
 import org.junit.jupiter.api.Test;
 
 class PipelineStatusPollerTest {
@@ -23,36 +22,30 @@ class PipelineStatusPollerTest {
   void pollSleepsWhenTheCircleCiApiCallFails() throws ApiException {
     UUID pipelineId = UUID.randomUUID();
     int projectId = 123456;
-    PipelineLight pipeline = (new PipelineLight()).id(pipelineId);
 
-    when(CIRCLECI.getPipelineById(pipelineId)).thenThrow(new RuntimeException());
-    PipelineStatusPoller poller =
-        new PipelineStatusPoller(projectId, pipeline, CIRCLECI, GITLAB, JOB_RUNNER);
+    Pipeline pipeline = ImmutablePipeline.of(pipelineId, projectId, State.PENDING, "", "master");
+
+    when(CIRCLECI.refreshPipeline(pipeline)).thenThrow(new RuntimeException());
+    PipelineStatusPoller poller = new PipelineStatusPoller(pipeline, CIRCLECI, GITLAB, JOB_RUNNER);
     assertTrue(poller.poll() > 0);
   }
 
   @Test
   void pollSleepsWhenThePipelineIsRunning() throws ApiException {
     UUID pipelineId = UUID.randomUUID();
-    int projectId = 123456;
     String sha1 = "8e38b1205365ed98c8f27ed2e1f35166a3f5858f";
-    PipelineLight pipeline = (new PipelineLight()).id(pipelineId);
-    PipelineWithWorkflows p =
-        (new PipelineWithWorkflows())
-            .id(pipelineId)
-            .state(PipelineWithWorkflows.StateEnum.RUNNING)
-            .vcs(new PipelineWithWorkflowsVcs().revision(sha1));
 
-    when(CIRCLECI.getPipelineById(pipelineId)).thenReturn(p);
-    when(GITLAB.updateCommitStatus(projectId, p)).thenReturn(CommitBuildState.RUNNING);
-    PipelineStatusPoller poller =
-        new PipelineStatusPoller(projectId, pipeline, CIRCLECI, GITLAB, JOB_RUNNER);
+    Pipeline pipeline = ImmutablePipeline.of(pipelineId, 123456, State.PENDING, sha1, "master");
+
+    when(CIRCLECI.refreshPipeline(pipeline)).thenReturn(pipeline);
+    when(GITLAB.updateCommitStatus(pipeline)).thenReturn(State.RUNNING);
+    PipelineStatusPoller poller = new PipelineStatusPoller(pipeline, CIRCLECI, GITLAB, JOB_RUNNER);
     assertTrue(poller.poll() > 0);
   }
 
   @Test
   void retryPolicyCoversAllGitLabStatuses() {
-    for (var state : CommitBuildState.values()) {
+    for (var state : State.values()) {
       var policy = new PipelineStatusPoller.RetryPolicy();
       long delay = policy.delayFor(state);
       assertTrue(delay >= -1);
@@ -62,27 +55,27 @@ class PipelineStatusPollerTest {
   @Test
   void retryPolicyDoesNotBackOffAsStatesTransition() {
     var policy = new PipelineStatusPoller.RetryPolicy();
-    assertEquals(1000, policy.delayFor(CommitBuildState.PENDING));
-    assertEquals(1000, policy.delayFor(CommitBuildState.RUNNING));
-    assertEquals(-1, policy.delayFor(CommitBuildState.SUCCESS));
+    assertEquals(1000, policy.delayFor(State.PENDING));
+    assertEquals(1000, policy.delayFor(State.RUNNING));
+    assertEquals(-1, policy.delayFor(State.SUCCESS));
   }
 
   @Test
   void retryPolicyBacksOffForRepeatedIdenticalStatuses() {
     var policy = new PipelineStatusPoller.RetryPolicy();
-    assertEquals(1000, policy.delayFor(CommitBuildState.PENDING));
-    assertEquals(2000, policy.delayFor(CommitBuildState.PENDING));
-    assertEquals(4000, policy.delayFor(CommitBuildState.PENDING));
-    assertEquals(8000, policy.delayFor(CommitBuildState.PENDING));
-    assertEquals(10000, policy.delayFor(CommitBuildState.PENDING));
-    assertEquals(10000, policy.delayFor(CommitBuildState.PENDING));
-    assertEquals(1000, policy.delayFor(CommitBuildState.RUNNING));
-    assertEquals(2000, policy.delayFor(CommitBuildState.RUNNING));
-    assertEquals(4000, policy.delayFor(CommitBuildState.RUNNING));
-    assertEquals(8000, policy.delayFor(CommitBuildState.RUNNING));
-    assertEquals(10000, policy.delayFor(CommitBuildState.RUNNING));
-    assertEquals(10000, policy.delayFor(CommitBuildState.RUNNING));
-    assertEquals(-1, policy.delayFor(CommitBuildState.SUCCESS));
+    assertEquals(1000, policy.delayFor(State.PENDING));
+    assertEquals(2000, policy.delayFor(State.PENDING));
+    assertEquals(4000, policy.delayFor(State.PENDING));
+    assertEquals(8000, policy.delayFor(State.PENDING));
+    assertEquals(10000, policy.delayFor(State.PENDING));
+    assertEquals(10000, policy.delayFor(State.PENDING));
+    assertEquals(1000, policy.delayFor(State.RUNNING));
+    assertEquals(2000, policy.delayFor(State.RUNNING));
+    assertEquals(4000, policy.delayFor(State.RUNNING));
+    assertEquals(8000, policy.delayFor(State.RUNNING));
+    assertEquals(10000, policy.delayFor(State.RUNNING));
+    assertEquals(10000, policy.delayFor(State.RUNNING));
+    assertEquals(-1, policy.delayFor(State.SUCCESS));
   }
 
   @Test

@@ -4,13 +4,15 @@ import com.circleci.client.v2.ApiException;
 import com.circleci.client.v2.api.DefaultApi;
 import com.circleci.client.v2.model.PipelineLight;
 import com.circleci.client.v2.model.PipelineWithWorkflows;
+import com.circleci.client.v2.model.PipelineWithWorkflows.StateEnum;
 import com.circleci.client.v2.model.TriggerPipelineParameters;
+import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.ClientErrorException;
@@ -30,6 +32,18 @@ public class CircleCi {
     this.circleCiApi = circleCiApi;
   }
 
+  public static final Map<StateEnum, State> CIRCLECI_TO_PIPELINE_STATE_MAP =
+      Map.of(
+          StateEnum.PENDING, State.PENDING,
+          StateEnum.CREATED, State.PENDING,
+          StateEnum.RUNNING, State.RUNNING,
+          StateEnum.SUCCESSFUL, State.SUCCESS,
+          StateEnum.FAILED, State.FAILED,
+          StateEnum.ERRORED, State.FAILED,
+          StateEnum.CANCELED, State.CANCELED,
+          StateEnum.ON_HOLD, State.RUNNING,
+          StateEnum.BLOCKED, State.RUNNING);
+
   /**
    * Some ApiExceptions have JSON as their message. The JSON is just {"message": "The real message"}
    * so we attempt to unwrap it here in order to avoid double JSON in the output.
@@ -45,29 +59,65 @@ public class CircleCi {
     }
   }
 
-  public PipelineWithWorkflows getPipelineById(UUID id) {
+  public Pipeline refreshPipeline(Pipeline pipeline) {
+    PipelineWithWorkflows pipelineWithWorkflows;
+
     try {
-      return circleCiApi.getPipelineById(id);
+      pipelineWithWorkflows = circleCiApi.getPipelineById(pipeline.id());
     } catch (ApiException e) {
+      // Pass through 4xx responses verbatim for ease of debugging.
+      if (e.getCode() >= 400 && e.getCode() < 500) {
+        throw new ClientErrorException(
+            maybeGetCircleCiApiErrorMessage(e), Response.Status.fromStatusCode(e.getCode()));
+      }
       throw new RuntimeException(e);
     }
+
+    if (pipeline.id() != null && !pipeline.id().equals(pipelineWithWorkflows.getId())) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Unexpected id %s in triggered pipeline %s",
+              pipelineWithWorkflows.getId(), pipeline));
+    }
+
+    if (!pipeline.revision().equals(pipelineWithWorkflows.getVcs().getRevision())) {
+      throw new IllegalArgumentException(
+          String.format("Unexpected revision in triggered pipeline %s", pipeline));
+    }
+
+    StateEnum circleCiState = pipelineWithWorkflows.getState();
+
+    if (circleCiState == null || !CIRCLECI_TO_PIPELINE_STATE_MAP.containsKey(circleCiState)) {
+      throw new IllegalArgumentException(String.format("Unknown pipeline state {}", circleCiState));
+    }
+
+    State pipelineState = CIRCLECI_TO_PIPELINE_STATE_MAP.get(circleCiState);
+
+    return ImmutablePipeline.copyOf(pipeline).withState(pipelineState);
   }
 
-  public PipelineLight triggerPipeline(
-      Optional<String> circleCiConfig,
-      String branch,
-      String after,
+  public Pipeline triggerPipeline(
+      Pipeline pipeline,
+      String circleCiConfig,
       String projectSlug,
       String sshFingerprint,
       String gitSshUrl) {
+    if (pipeline.triggered()) {
+      throw new IllegalStateException("This pipeline was already triggered.");
+    }
     try {
       var params = new TriggerPipelineWithConfigParameters();
-      params.setConfig(circleCiConfig.get());
-      params.setBranch(branch);
-      params.setRevision(after);
+      params.setConfig(circleCiConfig);
+      params.setBranch(pipeline.branch());
+      params.setRevision(pipeline.revision());
       params.setParameters(
           Map.of("gitlab_ssh_fingerprint", sshFingerprint, "gitlab_git_uri", gitSshUrl));
-      return circleCiApi.triggerPipeline(projectSlug, params);
+      PipelineLight pipelineLight = circleCiApi.triggerPipeline(projectSlug, params);
+      return ImmutablePipeline.builder()
+          .from(pipeline)
+          .state(State.PENDING)
+          .id(pipelineLight.getId())
+          .build();
     } catch (ApiException e) {
       LOGGER.error("Failed to trigger pipeline", e);
 

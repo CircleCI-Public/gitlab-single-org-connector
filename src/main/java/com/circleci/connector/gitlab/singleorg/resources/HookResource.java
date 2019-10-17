@@ -1,6 +1,5 @@
 package com.circleci.connector.gitlab.singleorg.resources;
 
-import com.circleci.client.v2.model.PipelineLight;
 import com.circleci.connector.gitlab.singleorg.ConnectorConfiguration;
 import com.circleci.connector.gitlab.singleorg.api.HookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutableHookResponse;
@@ -9,6 +8,9 @@ import com.circleci.connector.gitlab.singleorg.api.PushHook;
 import com.circleci.connector.gitlab.singleorg.client.CircleCi;
 import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.circleci.connector.gitlab.singleorg.client.PipelineStatusPoller;
+import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
@@ -45,7 +47,7 @@ public class HookResource {
   /** The configuration for this service. */
   @NotNull private final ConnectorConfiguration config;
 
-  @NotNull private final ScheduledExecutorService scheduledJobRunner;;
+  @NotNull private final ScheduledExecutorService scheduledJobRunner;
 
   /**
    * @param gitLabClient A configured GitLab API client.
@@ -111,20 +113,19 @@ public class HookResource {
       return responseBuilder.status(HookResponse.Status.IGNORED).build();
     }
 
+    Pipeline pipeline =
+        ImmutablePipeline.of(null, projectId, State.PENDING, hook.after(), hook.branch());
     // Trigger a Pipeline on CircleCI
-    PipelineLight pipeline =
+    pipeline =
         circleCiClient.triggerPipeline(
-            circleCiConfig,
-            hook.branch(),
-            hook.after(),
+            pipeline,
+            circleCiConfig.get(),
             projectSlug,
             sshFingerprint,
             hook.project().gitSshUrl());
 
     // Poll the CircleCI API for status updates to the pipeline and update GitLab appropriately
-    (new PipelineStatusPoller(
-            projectId, pipeline, circleCiClient, gitLabClient, scheduledJobRunner))
-        .start();
+    (new PipelineStatusPoller(pipeline, circleCiClient, gitLabClient, scheduledJobRunner)).start();
 
     return responseBuilder.status(HookResponse.Status.SUBMITTED).pipeline(pipeline).build();
   }
