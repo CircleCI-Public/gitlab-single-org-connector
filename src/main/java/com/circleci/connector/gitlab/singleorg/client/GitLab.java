@@ -69,13 +69,14 @@ public class GitLab {
    *
    * @param projectId a GitLab project id
    * @param pipeline the CircleCI pipeline
+   * @return The state submitted to GitLab
    */
-  public void updateCommitStatus(int projectId, PipelineWithWorkflows pipeline) {
+  public CommitBuildState updateCommitStatus(int projectId, PipelineWithWorkflows pipeline) {
     String sha = pipeline.getVcs().getRevision();
     StateEnum pipelineState = pipeline.getState();
     if (pipelineState == null || !CIRCLECI_TO_GITLAB_STATE_MAP.containsKey(pipelineState)) {
       LOGGER.error("Unknown pipeline state", pipelineState);
-      return;
+      return null;
     }
     CommitBuildState buildState = CIRCLECI_TO_GITLAB_STATE_MAP.get(pipelineState);
     CommitStatus commitStatus = new CommitStatus();
@@ -84,10 +85,17 @@ public class GitLab {
     String targetUrl = String.format("https://circleci.com/workflow-run/%s", pipeline.getId());
     commitStatus.setTargetUrl(targetUrl);
     try {
+      LOGGER.info(
+          "Setting the state of CircleCI pipeline {} as {} in GitLab",
+          pipeline.getId(),
+          buildState);
       gitLabApi.getCommitsApi().addCommitStatus(projectId, sha, buildState, commitStatus);
     } catch (GitLabApiException e) {
       LOGGER.error("Failed to update GitLab status", e);
+      return null;
     }
+
+    return buildState;
   }
 
   /**

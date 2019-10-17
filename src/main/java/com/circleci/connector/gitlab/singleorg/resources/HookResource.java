@@ -10,6 +10,7 @@ import com.circleci.connector.gitlab.singleorg.api.ImmutableHookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutablePushHook;
 import com.circleci.connector.gitlab.singleorg.api.PushHook;
 import com.circleci.connector.gitlab.singleorg.client.GitLab;
+import com.circleci.connector.gitlab.singleorg.client.PipelineStatusPoller;
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -142,6 +143,10 @@ public class HookResource {
       }
       throw e;
     }
+
+    // Poll the CircleCI API for status updates to the pipeline and update GitLab appropriately
+    (new PipelineStatusPoller(projectId, pipeline, circleCiApi, gitLabClient, scheduledJobRunner))
+        .start();
 
     return responseBuilder.status(HookResponse.Status.SUBMITTED).pipeline(pipeline).build();
   }
