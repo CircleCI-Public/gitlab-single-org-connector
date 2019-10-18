@@ -2,14 +2,11 @@ package com.circleci.connector.gitlab.singleorg.client;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import com.circleci.client.v2.ApiException;
-import com.circleci.client.v2.api.DefaultApi;
-import com.circleci.client.v2.model.PipelineLight;
-import com.circleci.client.v2.model.PipelineWithWorkflows;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.annotation.Nullable;
-import org.gitlab4j.api.Constants.CommitBuildState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,14 +16,11 @@ public class PipelineStatusPoller {
   /** The amount to delay before polling the CircleCI API for the first time. */
   private static final long INITIAL_DELAY_MILLIS = 1000;
 
-  /** The GitLab ID for the GitLab project we're updating. */
-  private final int projectId;
-
   /** The pipeline we're polling for status. */
-  private final PipelineLight pipeline;
+  private final Pipeline pipeline;
 
   /** The CircleCI client for calling the CircleCI API. */
-  private final DefaultApi circleCi;
+  private final CircleCi circleCi;
 
   /** The GitLab client for calling the the GitLab API. */
   private final GitLab gitLab;
@@ -38,12 +32,7 @@ public class PipelineStatusPoller {
   private final ScheduledExecutorService jobRunner;
 
   public PipelineStatusPoller(
-      int projectId,
-      PipelineLight pipeline,
-      DefaultApi circleCi,
-      GitLab gitLab,
-      ScheduledExecutorService jobRunner) {
-    this.projectId = projectId;
+      Pipeline pipeline, CircleCi circleCi, GitLab gitLab, ScheduledExecutorService jobRunner) {
     this.pipeline = pipeline;
     this.circleCi = circleCi;
     this.gitLab = gitLab;
@@ -64,17 +53,17 @@ public class PipelineStatusPoller {
    */
   @VisibleForTesting
   long poll() {
-    LOGGER.info("Polling for the status of CircleCI pipeline {}", pipeline.getId());
-    PipelineWithWorkflows p;
+    LOGGER.info("Polling for the status of CircleCI pipeline {}", pipeline.id());
+    Pipeline p;
     try {
-      p = circleCi.getPipelineById(pipeline.getId());
-    } catch (ApiException e) {
+      p = circleCi.refreshPipeline(pipeline);
+    } catch (RuntimeException e) {
       LOGGER.error(
-          "Caught error while polling for the status of CircleCI pipeline {}", pipeline.getId(), e);
+          "Caught error while polling for the status of CircleCI pipeline {}", pipeline.id(), e);
       return retryPolicy.delayFor(null);
     }
 
-    return retryPolicy.delayFor(gitLab.updateCommitStatus(projectId, p));
+    return retryPolicy.delayFor(gitLab.updateCommitStatus(p));
   }
 
   /**
@@ -84,9 +73,7 @@ public class PipelineStatusPoller {
    */
   private void schedule(long delayMillis) {
     LOGGER.info(
-        "Scheduling a poll of CircleCI pipeline {} in {}ms from now",
-        pipeline.getId(),
-        delayMillis);
+        "Scheduling a poll of CircleCI pipeline {} in {}ms from now", pipeline.id(), delayMillis);
     jobRunner.schedule(
         () -> {
           long rescheduleAfter = poll();
@@ -102,7 +89,7 @@ public class PipelineStatusPoller {
   static class RetryPolicy {
     private long consecutiveErrors;
 
-    @Nullable private CommitBuildState lastState;
+    @Nullable private State lastState;
 
     private long lastDelay;
 
@@ -139,7 +126,7 @@ public class PipelineStatusPoller {
      * @return The number of milliseconds we should sleep for or a negative number if we should stop
      *     polling.
      */
-    long delayFor(CommitBuildState gitLabState) {
+    long delayFor(State gitLabState) {
       // If there was an error we want to retry
       if (gitLabState == null) {
         consecutiveErrors++;

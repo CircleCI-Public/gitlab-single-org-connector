@@ -1,7 +1,7 @@
 package com.circleci.connector.gitlab.singleorg.client;
 
-import com.circleci.client.v2.model.PipelineWithWorkflows;
-import com.circleci.client.v2.model.PipelineWithWorkflows.StateEnum;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,17 +28,13 @@ public class GitLab {
     this.gitLabApi = gitLabApi;
   }
 
-  public static final Map<StateEnum, CommitBuildState> CIRCLECI_TO_GITLAB_STATE_MAP =
+  public static final Map<State, CommitBuildState> PIPELINE_TO_GITLAB_STATE_MAP =
       Map.of(
-          StateEnum.PENDING, CommitBuildState.PENDING,
-          StateEnum.CREATED, CommitBuildState.PENDING,
-          StateEnum.RUNNING, CommitBuildState.RUNNING,
-          StateEnum.SUCCESSFUL, CommitBuildState.SUCCESS,
-          StateEnum.FAILED, CommitBuildState.FAILED,
-          StateEnum.ERRORED, CommitBuildState.FAILED,
-          StateEnum.CANCELED, CommitBuildState.CANCELED,
-          StateEnum.ON_HOLD, CommitBuildState.RUNNING,
-          StateEnum.BLOCKED, CommitBuildState.RUNNING);
+          State.PENDING, CommitBuildState.PENDING,
+          State.RUNNING, CommitBuildState.RUNNING,
+          State.SUCCESS, CommitBuildState.SUCCESS,
+          State.FAILED, CommitBuildState.FAILED,
+          State.CANCELED, CommitBuildState.CANCELED);
 
   static final String CIRCLECI_CONFIG_PATH = ".circleci/config.yml";
   private static final String STRING_PARAMETER_YAML = "{type: string, default: ''}";
@@ -67,35 +63,34 @@ public class GitLab {
   /**
    * Calls GitLab to update the commit status of the given project with the status in pipeline.
    *
-   * @param projectId a GitLab project id
    * @param pipeline the CircleCI pipeline
    * @return The state submitted to GitLab
    */
-  public CommitBuildState updateCommitStatus(int projectId, PipelineWithWorkflows pipeline) {
-    String sha = pipeline.getVcs().getRevision();
-    StateEnum pipelineState = pipeline.getState();
-    if (pipelineState == null || !CIRCLECI_TO_GITLAB_STATE_MAP.containsKey(pipelineState)) {
-      LOGGER.error("Unknown pipeline state", pipelineState);
+  public State updateCommitStatus(Pipeline pipeline) {
+    String sha = pipeline.revision();
+    State pipelineState = pipeline.state();
+    if (pipelineState == null || !PIPELINE_TO_GITLAB_STATE_MAP.containsKey(pipelineState)) {
+      LOGGER.error("Unknown pipeline state {}", pipelineState);
       return null;
     }
-    CommitBuildState buildState = CIRCLECI_TO_GITLAB_STATE_MAP.get(pipelineState);
+    CommitBuildState buildState = PIPELINE_TO_GITLAB_STATE_MAP.get(pipelineState);
     CommitStatus commitStatus = new CommitStatus();
     commitStatus.setDescription("CircleCI Pipeline");
-    commitStatus.setStatus(pipeline.getState().getValue());
-    String targetUrl = String.format("https://circleci.com/workflow-run/%s", pipeline.getId());
+    commitStatus.setStatus(pipeline.state().name());
+    String targetUrl = String.format("https://circleci.com/workflow-run/%s", pipeline.id());
     commitStatus.setTargetUrl(targetUrl);
     try {
       LOGGER.info(
-          "Setting the state of CircleCI pipeline {} as {} in GitLab",
-          pipeline.getId(),
-          buildState);
-      gitLabApi.getCommitsApi().addCommitStatus(projectId, sha, buildState, commitStatus);
+          "Setting the state of CircleCI pipeline {} as {} in GitLab", pipeline.id(), buildState);
+      gitLabApi
+          .getCommitsApi()
+          .addCommitStatus(pipeline.projectId(), sha, buildState, commitStatus);
     } catch (GitLabApiException e) {
       LOGGER.error("Failed to update GitLab status", e);
       return null;
     }
 
-    return buildState;
+    return pipelineState;
   }
 
   /**

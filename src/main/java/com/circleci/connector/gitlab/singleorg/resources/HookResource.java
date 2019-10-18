@@ -1,28 +1,24 @@
 package com.circleci.connector.gitlab.singleorg.resources;
 
-import com.circleci.client.v2.ApiException;
-import com.circleci.client.v2.api.DefaultApi;
-import com.circleci.client.v2.model.PipelineLight;
-import com.circleci.client.v2.model.TriggerPipelineParameters;
 import com.circleci.connector.gitlab.singleorg.ConnectorConfiguration;
 import com.circleci.connector.gitlab.singleorg.api.HookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutableHookResponse;
 import com.circleci.connector.gitlab.singleorg.api.ImmutablePushHook;
 import com.circleci.connector.gitlab.singleorg.api.PushHook;
+import com.circleci.connector.gitlab.singleorg.client.CircleCi;
 import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.circleci.connector.gitlab.singleorg.client.PipelineStatusPoller;
+import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline;
+import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
 import com.codahale.metrics.annotation.Timed;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
-import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.BadRequestException;
-import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.NotFoundException;
@@ -43,11 +39,10 @@ public class HookResource {
   private static final ObjectMapper MAPPER = Jackson.newObjectMapper();
   private static final Logger LOGGER = LoggerFactory.getLogger(HookResource.class);
 
+  @NotNull private final CircleCi circleCiClient;
+
   /** A configured GitLab API client. */
   @NotNull private final GitLab gitLabClient;
-
-  /** The CircleCI API library, configured to call the CircleCI REST API. */
-  @NotNull private final DefaultApi circleCiApi;
 
   /** The configuration for this service. */
   @NotNull private final ConnectorConfiguration config;
@@ -56,16 +51,15 @@ public class HookResource {
 
   /**
    * @param gitLabClient A configured GitLab API client.
-   * @param circleCiApi The CircleCI API library, configured to call the CircleCI REST API.
    * @param config The configuration for this service.
    */
   public HookResource(
       GitLab gitLabClient,
-      DefaultApi circleCiApi,
+      CircleCi circleCiClient,
       ScheduledExecutorService scheduledJobRunner,
       ConnectorConfiguration config) {
+    this.circleCiClient = circleCiClient;
     this.gitLabClient = gitLabClient;
-    this.circleCiApi = circleCiApi;
     this.scheduledJobRunner = scheduledJobRunner;
     this.config = config;
   }
@@ -119,51 +113,21 @@ public class HookResource {
       return responseBuilder.status(HookResponse.Status.IGNORED).build();
     }
 
+    Pipeline pipeline =
+        ImmutablePipeline.of(null, projectId, State.PENDING, hook.after(), hook.branch());
     // Trigger a Pipeline on CircleCI
-    PipelineLight pipeline;
-    try {
-      var params = new TriggerPipelineWithConfigParameters();
-      params.setConfig(circleCiConfig.get());
-      params.setBranch(hook.branch());
-      params.setRevision(hook.after());
-      params.setParameters(
-          Map.of(
-              "gitlab_ssh_fingerprint",
-              sshFingerprint,
-              "gitlab_git_uri",
-              hook.project().gitSshUrl()));
-      pipeline = circleCiApi.triggerPipeline(projectSlug, params);
-    } catch (ApiException e) {
-      LOGGER.error("Failed to trigger pipeline", e);
-
-      // Pass through 4xx responses verbatim for ease of debugging.
-      if (e.getCode() >= 400 && e.getCode() < 500) {
-        throw new ClientErrorException(
-            maybeGetCircleCiApiErrorMessage(e), Response.Status.fromStatusCode(e.getCode()));
-      }
-      throw e;
-    }
+    pipeline =
+        circleCiClient.triggerPipeline(
+            pipeline,
+            circleCiConfig.get(),
+            projectSlug,
+            sshFingerprint,
+            hook.project().gitSshUrl());
 
     // Poll the CircleCI API for status updates to the pipeline and update GitLab appropriately
-    (new PipelineStatusPoller(projectId, pipeline, circleCiApi, gitLabClient, scheduledJobRunner))
-        .start();
+    (new PipelineStatusPoller(pipeline, circleCiClient, gitLabClient, scheduledJobRunner)).start();
 
     return responseBuilder.status(HookResponse.Status.SUBMITTED).pipeline(pipeline).build();
-  }
-
-  /**
-   * Some ApiExceptions have JSON as their message. The JSON is just {"message": "The real message"}
-   * so we attempt to unwrap it here in order to avoid double JSON in the output.
-   *
-   * @param e An ApiException as thrown by the CircleCI API.
-   * @return The error message from the exception, possibly unwrapped from JSON.
-   */
-  private static String maybeGetCircleCiApiErrorMessage(ApiException e) {
-    try {
-      return MAPPER.readValue(e.getMessage(), CircleCiErrorResponse.class).getMessage();
-    } catch (Exception _e) {
-      return e.getMessage();
-    }
   }
 
   /**
@@ -178,42 +142,6 @@ public class HookResource {
     if (gitLabToken != null && !gitLabToken.equals(token)) {
       throw new WebApplicationException(
           "Value of X-Gitlab-Token did not match configured value", Response.Status.FORBIDDEN);
-    }
-  }
-
-  static class TriggerPipelineWithConfigParameters extends TriggerPipelineParameters {
-    @JsonProperty private String config;
-
-    @JsonProperty private String revision;
-
-    @Nullable
-    public String getConfig() {
-      return config;
-    }
-
-    public void setConfig(String cfg) {
-      config = cfg;
-    }
-
-    @Nullable
-    public String getRevision() {
-      return revision;
-    }
-
-    public void setRevision(String rev) {
-      revision = rev;
-    }
-  }
-
-  static class CircleCiErrorResponse {
-    @JsonProperty private String message;
-
-    public String getMessage() {
-      return message;
-    }
-
-    public void setMessage(String msg) {
-      message = msg;
     }
   }
 }
