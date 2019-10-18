@@ -12,7 +12,10 @@ import com.circleci.client.v2.model.PipelineLight;
 import com.circleci.client.v2.model.PipelineWithWorkflows;
 import com.circleci.client.v2.model.PipelineWithWorkflows.StateEnum;
 import com.circleci.client.v2.model.PipelineWithWorkflowsVcs;
+import com.circleci.client.v2.model.PipelineWithWorkflowsWorkflows;
 import com.circleci.client.v2.model.TriggerPipelineParameters;
+import com.circleci.client.v2.model.Workflow;
+import com.circleci.client.v2.model.Workflow.StatusEnum;
 import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
 import com.circleci.connector.gitlab.singleorg.model.Pipeline;
 import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
@@ -21,6 +24,7 @@ import io.dropwizard.jackson.Jackson;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import javax.ws.rs.ClientErrorException;
 import org.junit.jupiter.api.Test;
@@ -44,6 +48,8 @@ class CircleCiTest {
   private static final PipelineLight PIPELINE_LIGHT;
   private static final PipelineWithWorkflows PIPELINE_WITH_WORKFLOWS;
 
+  private static final Workflow RUNNING_WORKFLOW;
+
   static {
     CIRCLECI_HAPPY = mock(DefaultApi.class);
     CIRCLECI_404 = mock(DefaultApi.class);
@@ -64,10 +70,21 @@ class CircleCiTest {
           }
         });
 
+    RUNNING_WORKFLOW = new Workflow();
+    RUNNING_WORKFLOW.setId(UUID.randomUUID());
+    RUNNING_WORKFLOW.setStatus(StatusEnum.RUNNING);
+
+    PipelineWithWorkflowsWorkflows pipelineWithWorkflowsWorkflows =
+        new PipelineWithWorkflowsWorkflows();
+    pipelineWithWorkflowsWorkflows.setId(RUNNING_WORKFLOW.getId());
+
+    PIPELINE_WITH_WORKFLOWS.setWorkflows(List.of(pipelineWithWorkflowsWorkflows));
+
     try {
       when(CIRCLECI_HAPPY.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
           .thenReturn(PIPELINE_LIGHT);
       when(CIRCLECI_HAPPY.getPipelineById(any(UUID.class))).thenReturn(PIPELINE_WITH_WORKFLOWS);
+      when(CIRCLECI_HAPPY.getWorkflowById(any(UUID.class))).thenReturn(RUNNING_WORKFLOW);
 
       when(CIRCLECI_404.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
           .thenThrow(new ApiException(404, "No such project"));
@@ -89,10 +106,50 @@ class CircleCiTest {
   }
 
   @Test
-  void allPipelineWithWorkflowsStatesCovered() {
-    List<PipelineWithWorkflows.StateEnum> states =
-        Arrays.asList(PipelineWithWorkflows.StateEnum.values());
-    assertEquals(new HashSet<>(states), CircleCi.CIRCLECI_TO_PIPELINE_STATE_MAP.keySet());
+  void pipelineStatePendingWhenNoWorkflows() {
+    assertEquals(State.PENDING, CircleCi.pipelineStateFromWorkflowStates(Set.of()));
+  }
+
+  @Test
+  void pipelineStateFailedWhenFailedWorkflows() {
+    assertEquals(
+        State.FAILED,
+        CircleCi.pipelineStateFromWorkflowStates(
+            Set.of(State.PENDING, State.RUNNING, State.SUCCESS, State.FAILED, State.CANCELED)));
+  }
+
+  @Test
+  void pipelineStateCanceledWhenCanceledWorkflows() {
+    assertEquals(
+        State.CANCELED,
+        CircleCi.pipelineStateFromWorkflowStates(
+            Set.of(State.PENDING, State.RUNNING, State.SUCCESS, State.CANCELED)));
+  }
+
+  @Test
+  void pipelineStateRunningWhenRunningWorkflows() {
+    assertEquals(
+        State.RUNNING,
+        CircleCi.pipelineStateFromWorkflowStates(
+            Set.of(State.PENDING, State.RUNNING, State.SUCCESS)));
+  }
+
+  @Test
+  void pipelineStatePendingWhenPendingWorkflows() {
+    assertEquals(
+        State.PENDING,
+        CircleCi.pipelineStateFromWorkflowStates(Set.of(State.PENDING, State.SUCCESS)));
+  }
+
+  @Test
+  void pipelineStateSucessWhenAllWorkflowsSuccess() {
+    assertEquals(State.SUCCESS, CircleCi.pipelineStateFromWorkflowStates(Set.of(State.SUCCESS)));
+  }
+
+  @Test
+  void allWorkflowsStatesCovered() {
+    List<StatusEnum> states = Arrays.asList(StatusEnum.values());
+    assertEquals(new HashSet<>(states), CircleCi.CIRCLECI_WORKFLOW_TO_PIPELINE_STATE_MAP.keySet());
   }
 
   @Test
