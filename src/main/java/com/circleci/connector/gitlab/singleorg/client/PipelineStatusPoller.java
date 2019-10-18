@@ -54,16 +54,23 @@ public class PipelineStatusPoller {
   @VisibleForTesting
   long poll() {
     LOGGER.info("Polling for the status of CircleCI pipeline {}", pipeline.id());
-    Pipeline p;
+    Pipeline refereshedPipeline;
     try {
-      p = circleCi.refreshPipeline(pipeline);
+      refereshedPipeline = circleCi.refreshPipeline(pipeline);
     } catch (RuntimeException e) {
       LOGGER.error(
           "Caught error while polling for the status of CircleCI pipeline {}", pipeline.id(), e);
       return retryPolicy.delayFor(null);
     }
 
-    return retryPolicy.delayFor(gitLab.updateCommitStatus(p));
+    LOGGER.info("Pipeline {} is in state {}", pipeline.id(), refereshedPipeline.state());
+
+    State state = pipeline.state();
+    if (refereshedPipeline.state() != state) {
+      state = gitLab.updateCommitStatus(refereshedPipeline);
+    }
+
+    return retryPolicy.delayFor(state);
   }
 
   /**
@@ -122,13 +129,13 @@ public class PipelineStatusPoller {
     /**
      * Compute the delay until the next poll.
      *
-     * @param gitLabState The state we set on GitLab. Null if there was an error.
+     * @param state The state we set on GitLab. Null if there was an error.
      * @return The number of milliseconds we should sleep for or a negative number if we should stop
      *     polling.
      */
-    long delayFor(State gitLabState) {
+    long delayFor(State state) {
       // If there was an error we want to retry
-      if (gitLabState == null) {
+      if (state == null) {
         consecutiveErrors++;
         if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
           return -1; // Give up due to too many errors
@@ -139,22 +146,21 @@ public class PipelineStatusPoller {
       // If we get this far, there was no error so reset the consecutive error count.
       consecutiveErrors = 0;
 
-      switch (gitLabState) {
+      switch (state) {
         case CANCELED:
         case FAILED:
         case SUCCESS:
           return -1; // Terminal state, stop polling
         case PENDING:
         case RUNNING:
-          if (gitLabState.equals(lastState)) {
+          if (state.equals(lastState)) {
             return sleepLonger();
           }
-          lastState = gitLabState;
+          lastState = state;
           lastDelay = 1000;
           return lastDelay;
         default:
-          throw new IllegalArgumentException(
-              String.format("Unknown GitLab state: %s", gitLabState));
+          throw new IllegalArgumentException(String.format("Unknown state: %s", state));
       }
     }
   }

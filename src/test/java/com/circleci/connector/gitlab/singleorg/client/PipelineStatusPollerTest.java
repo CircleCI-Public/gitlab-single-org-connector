@@ -3,6 +3,8 @@ package com.circleci.connector.gitlab.singleorg.client;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.circleci.client.v2.ApiException;
@@ -31,16 +33,32 @@ class PipelineStatusPollerTest {
   }
 
   @Test
-  void pollSleepsWhenThePipelineIsRunning() throws ApiException {
+  void gitlabUpdatedAndPollSleepsWhenThePipelineSwitchesToRunning() throws ApiException {
+    UUID pipelineId = UUID.randomUUID();
+    String sha1 = "8e38b1205365ed98c8f27ed2e1f35166a3f5858f";
+
+    Pipeline pipeline = ImmutablePipeline.of(pipelineId, 123456, State.PENDING, sha1, "master");
+    Pipeline newPipeline = ImmutablePipeline.copyOf(pipeline).withState(State.RUNNING);
+
+    when(CIRCLECI.refreshPipeline(pipeline)).thenReturn(newPipeline);
+    when(GITLAB.updateCommitStatus(pipeline)).thenReturn(State.RUNNING);
+    PipelineStatusPoller poller = new PipelineStatusPoller(pipeline, CIRCLECI, GITLAB, JOB_RUNNER);
+    assertTrue(poller.poll() > 0);
+    verify(GITLAB, times(1)).updateCommitStatus(newPipeline);
+  }
+
+  @Test
+  void pollSleepsWhenThePipelineStaysPending() {
     UUID pipelineId = UUID.randomUUID();
     String sha1 = "8e38b1205365ed98c8f27ed2e1f35166a3f5858f";
 
     Pipeline pipeline = ImmutablePipeline.of(pipelineId, 123456, State.PENDING, sha1, "master");
 
-    when(CIRCLECI.refreshPipeline(pipeline)).thenReturn(pipeline);
-    when(GITLAB.updateCommitStatus(pipeline)).thenReturn(State.RUNNING);
+    when(CIRCLECI.refreshPipeline(pipeline))
+        .thenReturn(ImmutablePipeline.copyOf(pipeline).withState(State.PENDING));
     PipelineStatusPoller poller = new PipelineStatusPoller(pipeline, CIRCLECI, GITLAB, JOB_RUNNER);
     assertTrue(poller.poll() > 0);
+    verify(GITLAB, times(0)).updateCommitStatus(pipeline);
   }
 
   @Test
