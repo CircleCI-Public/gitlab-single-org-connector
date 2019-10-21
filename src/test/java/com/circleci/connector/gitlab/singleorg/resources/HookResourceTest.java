@@ -14,7 +14,6 @@ import com.circleci.connector.gitlab.singleorg.client.CircleCi;
 import com.circleci.connector.gitlab.singleorg.client.GitLab;
 import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
 import com.circleci.connector.gitlab.singleorg.model.Pipeline;
-import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.testing.FixtureHelpers;
@@ -75,7 +74,7 @@ class HookResourceTest {
     CIRCLECI_SAD = mock(CircleCi.class);
     when(CIRCLECI_HAPPY.triggerPipeline(
             any(Pipeline.class), anyString(), anyString(), anyString(), anyString()))
-        .thenReturn(ImmutablePipeline.of(UUID.randomUUID(), 43, State.RUNNING, "abcd", "master"));
+        .thenReturn(ImmutablePipeline.of(UUID.randomUUID(), 43, "abcd", "master"));
     when(CIRCLECI_SAD.triggerPipeline(
             any(Pipeline.class), anyString(), anyString(), anyString(), anyString()))
         .thenThrow(new RuntimeException("bad things happened"));

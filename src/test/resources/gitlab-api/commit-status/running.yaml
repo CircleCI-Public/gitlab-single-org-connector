@@ -1,3 +1,4 @@
-description: CircleCI Pipeline
+description: CircleCI Workflow
 targetUrl: https://circleci.com/workflow-run/56283657-2b1c-4135-a6b2-acd65311bf3d
 status: RUNNING
+name: my-workflow

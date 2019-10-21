@@ -4,15 +4,22 @@ import com.circleci.client.v2.ApiException;
 import com.circleci.client.v2.api.DefaultApi;
 import com.circleci.client.v2.model.PipelineLight;
 import com.circleci.client.v2.model.PipelineWithWorkflows;
-import com.circleci.client.v2.model.PipelineWithWorkflows.StateEnum;
+import com.circleci.client.v2.model.PipelineWithWorkflowsWorkflows;
 import com.circleci.client.v2.model.TriggerPipelineParameters;
+import com.circleci.client.v2.model.Workflow.StatusEnum;
 import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
+import com.circleci.connector.gitlab.singleorg.model.ImmutableWorkflow;
 import com.circleci.connector.gitlab.singleorg.model.Pipeline;
-import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
+import com.circleci.connector.gitlab.singleorg.model.Workflow;
+import com.circleci.connector.gitlab.singleorg.model.Workflow.State;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.ClientErrorException;
@@ -32,17 +39,17 @@ public class CircleCi {
     this.circleCiApi = circleCiApi;
   }
 
-  public static final Map<StateEnum, State> CIRCLECI_TO_PIPELINE_STATE_MAP =
+  public static final Map<StatusEnum, State> CIRCLECI_TO_WORKFLOW_STATE_MAP =
       Map.of(
-          StateEnum.PENDING, State.PENDING,
-          StateEnum.CREATED, State.PENDING,
-          StateEnum.RUNNING, State.RUNNING,
-          StateEnum.SUCCESSFUL, State.SUCCESS,
-          StateEnum.FAILED, State.FAILED,
-          StateEnum.ERRORED, State.FAILED,
-          StateEnum.CANCELED, State.CANCELED,
-          StateEnum.ON_HOLD, State.RUNNING,
-          StateEnum.BLOCKED, State.RUNNING);
+          StatusEnum.RUNNING, State.RUNNING,
+          StatusEnum.FAILING, State.RUNNING,
+          StatusEnum.ON_HOLD, State.RUNNING,
+          StatusEnum.SUCCESS, State.SUCCESS,
+          StatusEnum.FAILED, State.FAILED,
+          StatusEnum.NOT_RUN, State.FAILED,
+          StatusEnum.ERROR, State.FAILED,
+          StatusEnum.UNAUTHORIZED, State.FAILED,
+          StatusEnum.CANCELED, State.CANCELED);
 
   /**
    * Some ApiExceptions have JSON as their message. The JSON is just {"message": "The real message"}
@@ -85,15 +92,38 @@ public class CircleCi {
           String.format("Unexpected revision in triggered pipeline %s", pipeline));
     }
 
-    StateEnum circleCiState = pipelineWithWorkflows.getState();
-
-    if (circleCiState == null || !CIRCLECI_TO_PIPELINE_STATE_MAP.containsKey(circleCiState)) {
-      throw new IllegalArgumentException(String.format("Unknown pipeline state {}", circleCiState));
+    List<PipelineWithWorkflowsWorkflows> circleCiWorkflows = pipelineWithWorkflows.getWorkflows();
+    Set<Workflow> workflows = new HashSet<>();
+    for (PipelineWithWorkflowsWorkflows circleCiWorkflow : circleCiWorkflows) {
+      workflows.add(fetchWorkflow(circleCiWorkflow.getId()));
     }
 
-    State pipelineState = CIRCLECI_TO_PIPELINE_STATE_MAP.get(circleCiState);
+    return ImmutablePipeline.copyOf(pipeline).withWorkflows(workflows);
+  }
 
-    return ImmutablePipeline.copyOf(pipeline).withState(pipelineState);
+  private Workflow fetchWorkflow(UUID circleCiWorkflowId) {
+    com.circleci.client.v2.model.Workflow circleCiWorkflow = null;
+    try {
+      circleCiWorkflow = circleCiApi.getWorkflowById(circleCiWorkflowId);
+    } catch (ApiException e) {
+      // Pass through 4xx responses verbatim for ease of debugging.
+      if (e.getCode() >= 400 && e.getCode() < 500) {
+        throw new ClientErrorException(
+            maybeGetCircleCiApiErrorMessage(e), Response.Status.fromStatusCode(e.getCode()));
+      }
+      throw new RuntimeException(e);
+    }
+
+    StatusEnum circleCiState = circleCiWorkflow.getStatus();
+
+    if (circleCiState == null || !CIRCLECI_TO_WORKFLOW_STATE_MAP.containsKey(circleCiState)) {
+      throw new IllegalArgumentException(
+          String.format("Unknown workflow state %s", circleCiState.name()));
+    }
+
+    State workflowState = CIRCLECI_TO_WORKFLOW_STATE_MAP.get(circleCiState);
+
+    return ImmutableWorkflow.of(circleCiWorkflowId, circleCiWorkflow.getName(), workflowState);
   }
 
   public Pipeline triggerPipeline(
@@ -113,11 +143,7 @@ public class CircleCi {
       params.setParameters(
           Map.of("gitlab_ssh_fingerprint", sshFingerprint, "gitlab_git_uri", gitSshUrl));
       PipelineLight pipelineLight = circleCiApi.triggerPipeline(projectSlug, params);
-      return ImmutablePipeline.builder()
-          .from(pipeline)
-          .state(State.PENDING)
-          .id(pipelineLight.getId())
-          .build();
+      return ImmutablePipeline.builder().from(pipeline).id(pipelineLight.getId()).build();
     } catch (ApiException e) {
       LOGGER.error("Failed to trigger pipeline", e);
 
@@ -128,6 +154,10 @@ public class CircleCi {
       }
       throw new RuntimeException(e);
     }
+  }
+
+  public Workflow refreshWorkflow(Workflow workflow) {
+    return fetchWorkflow(workflow.id());
   }
 
   static class TriggerPipelineWithConfigParameters extends TriggerPipelineParameters {

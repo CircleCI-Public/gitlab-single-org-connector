@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.circleci.connector.gitlab.singleorg.model.ImmutablePipeline;
+import com.circleci.connector.gitlab.singleorg.model.ImmutableWorkflow;
 import com.circleci.connector.gitlab.singleorg.model.Pipeline;
-import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
+import com.circleci.connector.gitlab.singleorg.model.Workflow;
+import com.circleci.connector.gitlab.singleorg.model.Workflow.State;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -74,14 +76,13 @@ class GitLabTest {
   void updateRunningCommitStatus() throws GitLabApiException, IOException {
     Pipeline pipeline =
         ImmutablePipeline.of(
-            UUID.fromString("56283657-2b1c-4135-a6b2-acd65311bf3d"),
-            PROJECT_ID,
-            State.RUNNING,
-            "6789",
-            "master");
+            UUID.fromString("1a57adba-2a36-40fd-8396-82f5bd17168e"), PROJECT_ID, "6789", "master");
+    Workflow workflow =
+        ImmutableWorkflow.of(
+            UUID.fromString("56283657-2b1c-4135-a6b2-acd65311bf3d"), "my-workflow", State.RUNNING);
     CommitStatus commitStatus = loadYamlAsCommitStatus("running.yaml");
 
-    gitLab.updateCommitStatus(pipeline);
+    gitLab.updateCommitStatus(pipeline, workflow);
     Mockito.verify(mockCommitsApi, Mockito.times(1))
         .addCommitStatus(
             ArgumentMatchers.eq(PROJECT_ID),
@@ -93,7 +94,7 @@ class GitLabTest {
   @Test
   void allStatesCovered() {
     List<State> states = Arrays.asList(State.values());
-    assertEquals(new HashSet<>(states), GitLab.PIPELINE_TO_GITLAB_STATE_MAP.keySet());
+    assertEquals(new HashSet<>(states), GitLab.WORKFLOW_TO_GITLAB_STATE_MAP.keySet());
   }
 
   @Test
