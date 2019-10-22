@@ -18,11 +18,12 @@ public class WorkflowPoller {
   private static final long INITIAL_DELAY_MILLIS = 1000;
 
   private final Pipeline pipeline;
-  private final Workflow workflow;
   private final CircleCi circleCi;
   private final GitLab gitLab;
   private final ScheduledExecutorService jobRunner;
   private final RetryPolicy retryPolicy;
+  private Workflow workflow;
+  private State gitlabState;
 
   public WorkflowPoller(
       Pipeline pipeline,
@@ -70,9 +71,9 @@ public class WorkflowPoller {
   @VisibleForTesting
   long poll() {
     LOGGER.info("Polling for the status of CircleCI workflow {}", workflow.id());
-    Workflow workflow;
+    Workflow refreshedWorkflow;
     try {
-      workflow = circleCi.refreshWorkflow(this.workflow);
+      refreshedWorkflow = circleCi.refreshWorkflow(this.workflow);
     } catch (RuntimeException e) {
       LOGGER.error(
           "Caught error while polling for the status of CircleCI workflow {}",
@@ -81,7 +82,17 @@ public class WorkflowPoller {
       return retryPolicy.delayFor(null);
     }
 
-    return retryPolicy.delayFor(gitLab.updateCommitStatus(pipeline, this.workflow));
+    workflow = refreshedWorkflow;
+
+    LOGGER.info("Workflow {} is in state {}", workflow.id(), workflow.state());
+
+    State state = refreshedWorkflow.state();
+    if (state != gitlabState) {
+      state = gitLab.updateCommitStatus(pipeline, workflow);
+      gitlabState = state;
+    }
+
+    return retryPolicy.delayFor(state);
   }
 
   /** Parcel up the retry delays and policy in a single, testable place. */

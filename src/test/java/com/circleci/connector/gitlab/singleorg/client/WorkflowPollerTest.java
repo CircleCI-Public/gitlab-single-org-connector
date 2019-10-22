@@ -3,6 +3,8 @@ package com.circleci.connector.gitlab.singleorg.client;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.circleci.client.v2.ApiException;
@@ -39,12 +41,29 @@ class WorkflowPollerTest {
     String sha1 = "8e38b1205365ed98c8f27ed2e1f35166a3f5858f";
 
     Pipeline pipeline = ImmutablePipeline.of(pipelineId, 123456, sha1, "master");
-    Workflow workflow = ImmutableWorkflow.of(UUID.randomUUID(), "my-workflow", State.RUNNING);
+    Workflow workflow = ImmutableWorkflow.of(UUID.randomUUID(), "my-workflow", State.PENDING);
+    Workflow newWorkflow = ImmutableWorkflow.copyOf(workflow).withState(State.RUNNING);
 
-    when(CIRCLECI.refreshPipeline(pipeline)).thenReturn(pipeline);
+    when(CIRCLECI.refreshWorkflow(workflow)).thenReturn(newWorkflow);
     when(GITLAB.updateCommitStatus(pipeline, workflow)).thenReturn(State.RUNNING);
     WorkflowPoller poller = new WorkflowPoller(pipeline, workflow, CIRCLECI, GITLAB, JOB_RUNNER);
     assertTrue(poller.poll() > 0);
+    verify(GITLAB, times(1)).updateCommitStatus(pipeline, newWorkflow);
+  }
+
+  @Test
+  void pollSleepsWhenTheWorkflowStaysPending() {
+    UUID pipelineId = UUID.randomUUID();
+    String sha1 = "8e38b1205365ed98c8f27ed2e1f35166a3f5858f";
+
+    Pipeline pipeline = ImmutablePipeline.of(pipelineId, 123456, sha1, "master");
+    Workflow workflow = ImmutableWorkflow.of(UUID.randomUUID(), "my-workflow", State.PENDING);
+
+    when(CIRCLECI.refreshWorkflow(workflow))
+        .thenReturn(ImmutableWorkflow.copyOf(workflow).withState(State.PENDING));
+    WorkflowPoller poller = new WorkflowPoller(pipeline, workflow, CIRCLECI, GITLAB, JOB_RUNNER);
+    assertTrue(poller.poll() > 0);
+    verify(GITLAB, times(1)).updateCommitStatus(pipeline, workflow);
   }
 
   @Test
