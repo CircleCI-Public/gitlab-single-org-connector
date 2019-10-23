@@ -31,7 +31,6 @@ public class GitLab {
 
   public static final Map<State, CommitBuildState> WORKFLOW_TO_GITLAB_STATE_MAP =
       Map.of(
-          State.PENDING, CommitBuildState.PENDING,
           State.RUNNING, CommitBuildState.RUNNING,
           State.SUCCESS, CommitBuildState.SUCCESS,
           State.FAILED, CommitBuildState.FAILED,

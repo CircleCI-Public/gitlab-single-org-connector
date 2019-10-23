@@ -150,7 +150,6 @@ public class WorkflowPoller {
         case FAILED:
         case SUCCESS:
           return -1; // Terminal state, stop polling
-        case PENDING:
         case RUNNING:
           if (workflowState.equals(lastState)) {
             return sleepLonger();

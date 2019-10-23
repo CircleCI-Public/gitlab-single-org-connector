@@ -7,7 +7,6 @@ import org.immutables.value.Value;
 @Value.Style(allParameters = true)
 public abstract class Workflow {
   public enum State {
-    PENDING,
     RUNNING,
     SUCCESS,
     FAILED,

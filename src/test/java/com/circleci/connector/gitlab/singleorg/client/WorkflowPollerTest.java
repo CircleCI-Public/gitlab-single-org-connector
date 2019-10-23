@@ -28,7 +28,7 @@ class WorkflowPollerTest {
     int projectId = 123456;
 
     Pipeline pipeline = ImmutablePipeline.of(pipelineId, projectId, "", "master");
-    Workflow workflow = ImmutableWorkflow.of(UUID.randomUUID(), "my-workflow", State.PENDING);
+    Workflow workflow = ImmutableWorkflow.of(UUID.randomUUID(), "my-workflow", State.RUNNING);
 
     when(CIRCLECI.refreshWorkflow(workflow)).thenThrow(new RuntimeException());
     WorkflowPoller poller = new WorkflowPoller(pipeline, workflow, CIRCLECI, GITLAB, JOB_RUNNER);
@@ -36,31 +36,31 @@ class WorkflowPollerTest {
   }
 
   @Test
-  void pollSleepsWhenTheWorkflowIsRunning() throws ApiException {
+  void pollSleepsWhenTheWorkflowTransitions() throws ApiException {
     UUID pipelineId = UUID.randomUUID();
     String sha1 = "8e38b1205365ed98c8f27ed2e1f35166a3f5858f";
 
     Pipeline pipeline = ImmutablePipeline.of(pipelineId, 123456, sha1, "master");
-    Workflow workflow = ImmutableWorkflow.of(UUID.randomUUID(), "my-workflow", State.PENDING);
-    Workflow newWorkflow = ImmutableWorkflow.copyOf(workflow).withState(State.RUNNING);
+    Workflow workflow = ImmutableWorkflow.of(UUID.randomUUID(), "my-workflow", State.RUNNING);
+    Workflow newWorkflow = ImmutableWorkflow.copyOf(workflow).withState(State.FAILED);
 
     when(CIRCLECI.refreshWorkflow(workflow)).thenReturn(newWorkflow);
-    when(GITLAB.updateCommitStatus(pipeline, workflow)).thenReturn(State.RUNNING);
+    when(GITLAB.updateCommitStatus(pipeline, workflow)).thenReturn(State.FAILED);
     WorkflowPoller poller = new WorkflowPoller(pipeline, workflow, CIRCLECI, GITLAB, JOB_RUNNER);
     assertTrue(poller.poll() > 0);
     verify(GITLAB, times(1)).updateCommitStatus(pipeline, newWorkflow);
   }
 
   @Test
-  void pollSleepsWhenTheWorkflowStaysPending() {
+  void pollSleepsWhenTheWorkflowStaysRunning() {
     UUID pipelineId = UUID.randomUUID();
     String sha1 = "8e38b1205365ed98c8f27ed2e1f35166a3f5858f";
 
     Pipeline pipeline = ImmutablePipeline.of(pipelineId, 123456, sha1, "master");
-    Workflow workflow = ImmutableWorkflow.of(UUID.randomUUID(), "my-workflow", State.PENDING);
+    Workflow workflow = ImmutableWorkflow.of(UUID.randomUUID(), "my-workflow", State.RUNNING);
 
     when(CIRCLECI.refreshWorkflow(workflow))
-        .thenReturn(ImmutableWorkflow.copyOf(workflow).withState(State.PENDING));
+        .thenReturn(ImmutableWorkflow.copyOf(workflow).withState(State.RUNNING));
     WorkflowPoller poller = new WorkflowPoller(pipeline, workflow, CIRCLECI, GITLAB, JOB_RUNNER);
     assertTrue(poller.poll() > 0);
     verify(GITLAB, times(1)).updateCommitStatus(pipeline, workflow);
@@ -78,7 +78,6 @@ class WorkflowPollerTest {
   @Test
   void retryPolicyDoesNotBackOffAsStatesTransition() {
     var policy = new WorkflowPoller.RetryPolicy();
-    assertEquals(1000, policy.delayFor(State.PENDING));
     assertEquals(1000, policy.delayFor(State.RUNNING));
     assertEquals(-1, policy.delayFor(State.SUCCESS));
   }
@@ -86,12 +85,6 @@ class WorkflowPollerTest {
   @Test
   void retryPolicyBacksOffForRepeatedIdenticalStatuses() {
     var policy = new WorkflowPoller.RetryPolicy();
-    assertEquals(1000, policy.delayFor(State.PENDING));
-    assertEquals(2000, policy.delayFor(State.PENDING));
-    assertEquals(4000, policy.delayFor(State.PENDING));
-    assertEquals(8000, policy.delayFor(State.PENDING));
-    assertEquals(10000, policy.delayFor(State.PENDING));
-    assertEquals(10000, policy.delayFor(State.PENDING));
     assertEquals(1000, policy.delayFor(State.RUNNING));
     assertEquals(2000, policy.delayFor(State.RUNNING));
     assertEquals(4000, policy.delayFor(State.RUNNING));
