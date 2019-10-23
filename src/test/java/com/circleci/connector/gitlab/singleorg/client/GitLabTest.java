@@ -16,9 +16,6 @@ import io.dropwizard.util.Resources;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.gitlab4j.api.CommitsApi;
@@ -89,12 +86,6 @@ class GitLabTest {
             ArgumentMatchers.eq("6789"),
             ArgumentMatchers.eq(CommitBuildState.RUNNING),
             ArgumentMatchers.refEq(commitStatus));
-  }
-
-  @Test
-  void allStatesCovered() {
-    List<State> states = Arrays.asList(State.values());
-    assertEquals(new HashSet<>(states), GitLab.WORKFLOW_TO_GITLAB_STATE_MAP.keySet());
   }
 
   @Test

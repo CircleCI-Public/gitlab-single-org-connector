@@ -11,7 +11,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Map;
 import java.util.Optional;
 import org.gitlab4j.api.Constants.CommitBuildState;
 import org.gitlab4j.api.GitLabApi;
@@ -28,13 +27,6 @@ public class GitLab {
   public GitLab(GitLabApi gitLabApi) {
     this.gitLabApi = gitLabApi;
   }
-
-  public static final Map<State, CommitBuildState> WORKFLOW_TO_GITLAB_STATE_MAP =
-      Map.of(
-          State.RUNNING, CommitBuildState.RUNNING,
-          State.SUCCESS, CommitBuildState.SUCCESS,
-          State.FAILED, CommitBuildState.FAILED,
-          State.CANCELED, CommitBuildState.CANCELED);
 
   static final String CIRCLECI_CONFIG_PATH = ".circleci/config.yml";
   private static final String STRING_PARAMETER_YAML = "{type: string, default: ''}";
@@ -71,11 +63,11 @@ public class GitLab {
     String sha = pipeline.revision();
     State state = workflow.state();
 
-    if (state == null || !WORKFLOW_TO_GITLAB_STATE_MAP.containsKey(state)) {
+    CommitBuildState buildState = CommitBuildState.valueOf(state.name());
+    if (buildState == null) {
       LOGGER.error("Unknown workflow state {}", state);
       return null;
     }
-    CommitBuildState buildState = WORKFLOW_TO_GITLAB_STATE_MAP.get(state);
     CommitStatus commitStatus = new CommitStatus();
     commitStatus.setName(workflow.name());
     commitStatus.setDescription("CircleCI Workflow");
