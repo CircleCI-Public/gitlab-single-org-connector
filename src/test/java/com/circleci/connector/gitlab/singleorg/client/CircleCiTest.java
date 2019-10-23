@@ -118,15 +118,15 @@ class CircleCiTest {
   }
 
   @Test
-  void refreshPipelineIfCircleCiReturns4xxWePassItOn() {
+  void refreshPipelineIfCircleCiReturns4xxWeThrow() {
     CircleCi circleCi = new CircleCi(CIRCLECI_404);
-    assertThrows(ClientErrorException.class, () -> circleCi.refreshPipeline(PIPELINE_WITH_ID));
+    assertThrows(RuntimeException.class, () -> circleCi.refreshPipeline(PIPELINE_WITH_ID));
   }
 
   @Test
-  void refreshPipelineIfCircleCiReturns4xxWithAJsonMessageWePassItOn() {
+  void refreshPipelineIfCircleCiReturns4xxWithAJsonMessageWeThrow() {
     CircleCi circleCi = new CircleCi(CIRCLECI_404_JSON);
-    assertThrows(ClientErrorException.class, () -> circleCi.refreshPipeline(PIPELINE_WITH_ID));
+    assertThrows(RuntimeException.class, () -> circleCi.refreshPipeline(PIPELINE_WITH_ID));
   }
 
   @Test
@@ -145,15 +145,15 @@ class CircleCiTest {
   }
 
   @Test
-  void refreshWorkflowIfCircleCiReturns4xxWePassItOn() {
+  void refreshWorkflowIfCircleCiReturns4xxWeThrow() {
     CircleCi circleCi = new CircleCi(CIRCLECI_404);
-    assertThrows(ClientErrorException.class, () -> circleCi.refreshWorkflow(WORKFLOW));
+    assertThrows(RuntimeException.class, () -> circleCi.refreshWorkflow(WORKFLOW));
   }
 
   @Test
-  void refreshWorkflowIfCircleCiReturns4xxWithAJsonMessageWePassItOn() {
+  void refreshWorkflowIfCircleCiReturns4xxWithAJsonMessageWeThrow() {
     CircleCi circleCi = new CircleCi(CIRCLECI_404_JSON);
-    assertThrows(ClientErrorException.class, () -> circleCi.refreshWorkflow(WORKFLOW));
+    assertThrows(RuntimeException.class, () -> circleCi.refreshWorkflow(WORKFLOW));
   }
 
   @Test

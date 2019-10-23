@@ -72,11 +72,7 @@ public class CircleCi {
     try {
       pipelineWithWorkflows = circleCiApi.getPipelineById(pipeline.id());
     } catch (ApiException e) {
-      // Pass through 4xx responses verbatim for ease of debugging.
-      if (e.getCode() >= 400 && e.getCode() < 500) {
-        throw new ClientErrorException(
-            maybeGetCircleCiApiErrorMessage(e), Response.Status.fromStatusCode(e.getCode()));
-      }
+      LOGGER.error("Failed to fetch pipeline", e);
       throw new RuntimeException(e);
     }
 
@@ -106,11 +102,7 @@ public class CircleCi {
     try {
       circleCiWorkflow = circleCiApi.getWorkflowById(circleCiWorkflowId);
     } catch (ApiException e) {
-      // Pass through 4xx responses verbatim for ease of debugging.
-      if (e.getCode() >= 400 && e.getCode() < 500) {
-        throw new ClientErrorException(
-            maybeGetCircleCiApiErrorMessage(e), Response.Status.fromStatusCode(e.getCode()));
-      }
+      LOGGER.error("Failed to fetch workflow", e);
       throw new RuntimeException(e);
     }
 
