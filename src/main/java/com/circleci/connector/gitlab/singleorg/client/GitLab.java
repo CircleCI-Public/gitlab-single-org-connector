@@ -1,7 +1,8 @@
 package com.circleci.connector.gitlab.singleorg.client;
 
 import com.circleci.connector.gitlab.singleorg.model.Pipeline;
-import com.circleci.connector.gitlab.singleorg.model.Pipeline.State;
+import com.circleci.connector.gitlab.singleorg.model.Workflow;
+import com.circleci.connector.gitlab.singleorg.model.Workflow.State;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,7 +11,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Map;
 import java.util.Optional;
 import org.gitlab4j.api.Constants.CommitBuildState;
 import org.gitlab4j.api.GitLabApi;
@@ -27,14 +27,6 @@ public class GitLab {
   public GitLab(GitLabApi gitLabApi) {
     this.gitLabApi = gitLabApi;
   }
-
-  public static final Map<State, CommitBuildState> PIPELINE_TO_GITLAB_STATE_MAP =
-      Map.of(
-          State.PENDING, CommitBuildState.PENDING,
-          State.RUNNING, CommitBuildState.RUNNING,
-          State.SUCCESS, CommitBuildState.SUCCESS,
-          State.FAILED, CommitBuildState.FAILED,
-          State.CANCELED, CommitBuildState.CANCELED);
 
   static final String CIRCLECI_CONFIG_PATH = ".circleci/config.yml";
   private static final String STRING_PARAMETER_YAML = "{type: string, default: ''}";
@@ -61,27 +53,30 @@ public class GitLab {
   }
 
   /**
-   * Calls GitLab to update the commit status of the given project with the status in pipeline.
+   * Calls GitLab to update the commit status of the given project with the status of the given
+   * workflow
    *
    * @param pipeline the CircleCI pipeline
    * @return The state submitted to GitLab
    */
-  public State updateCommitStatus(Pipeline pipeline) {
+  public State updateCommitStatus(Pipeline pipeline, Workflow workflow) {
     String sha = pipeline.revision();
-    State pipelineState = pipeline.state();
-    if (pipelineState == null || !PIPELINE_TO_GITLAB_STATE_MAP.containsKey(pipelineState)) {
-      LOGGER.error("Unknown pipeline state {}", pipelineState);
+    State state = workflow.state();
+
+    CommitBuildState buildState = CommitBuildState.valueOf(state.name());
+    if (buildState == null) {
+      LOGGER.error("Unknown workflow state {}", state);
       return null;
     }
-    CommitBuildState buildState = PIPELINE_TO_GITLAB_STATE_MAP.get(pipelineState);
     CommitStatus commitStatus = new CommitStatus();
-    commitStatus.setDescription("CircleCI Pipeline");
-    commitStatus.setStatus(pipeline.state().name());
-    String targetUrl = String.format("https://circleci.com/workflow-run/%s", pipeline.id());
+    commitStatus.setName(workflow.name());
+    commitStatus.setDescription("CircleCI Workflow");
+    commitStatus.setStatus(state.name());
+    String targetUrl = String.format("https://circleci.com/workflow-run/%s", workflow.id());
     commitStatus.setTargetUrl(targetUrl);
     try {
       LOGGER.info(
-          "Setting the state of CircleCI pipeline {} as {} in GitLab", pipeline.id(), buildState);
+          "Setting the state of CircleCI workflow {} as {} in GitLab", workflow.id(), buildState);
       gitLabApi
           .getCommitsApi()
           .addCommitStatus(pipeline.projectId(), sha, buildState, commitStatus);
@@ -90,7 +85,7 @@ public class GitLab {
       return null;
     }
 
-    return pipelineState;
+    return state;
   }
 
   /**
