@@ -67,18 +67,18 @@ public class ConnectorConfiguration extends Configuration {
 
   static class CircleCi {
 
-    @NotEmpty @NotNull private String apiToken;
+    @NotEmpty @NotNull private String integrationToken;
 
     public CircleCi() {}
 
     @JsonProperty
-    String getApiToken() {
-      return apiToken;
+    String getIntegrationToken() {
+      return integrationToken;
     }
 
     @JsonProperty
-    void setApiToken(String token) {
-      apiToken = token;
+    void setIntegrationToken(String token) {
+      integrationToken = token;
     }
   }
 

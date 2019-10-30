@@ -7,6 +7,18 @@ single org on GitLab.com to CircleCI.com
 provided as-is and with no warranty or other representation of production
 quality.**
 
+## CircleCI configuration
+
+To authenticate as an integration in CircleCI, the connector needs to wield a CircleCI integration
+token. This token allows the connector to trigger pipelines with custom configuration on any
+associated projects.
+
+Set your integration token in the connector configuration:
+```yaml
+circleCi:
+    integrationToken: "my-integration-token"
+```
+
 ## GitLab configuration
 
 In Gitlab's project UI, go to `Settings > Integrations`, and add a webhook

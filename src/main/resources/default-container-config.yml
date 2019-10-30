@@ -1,7 +1,7 @@
 ---
 
 circleCi:
-  apiToken: ${CIRCLECI_API_TOKEN} #set this to your token value
+  integrationToken: ${CIRCLECI_INTEGRATION_TOKEN} #set this to your token value
 server:
   applicationConnectors:
     - type: http

@@ -29,7 +29,7 @@ class ConnectorConfigurationTest {
   void weCanSetEverythingInAConfigFileAndItStillWorks() throws Exception {
     ConnectorConfiguration cfg = loadFromResources("complete-config.yml");
     assertEquals("super-secret", cfg.getGitlab().getSharedSecretForHooks());
-    assertEquals("not-really-a-token", cfg.getCircleCi().getApiToken());
+    assertEquals("not-really-a-token", cfg.getCircleCi().getIntegrationToken());
     assertEquals(Map.of(123, "gh/ghorg/ghrepo"), cfg.getDomainMapping().getRepositories());
     assertEquals(
         Map.of(123, "aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa"),

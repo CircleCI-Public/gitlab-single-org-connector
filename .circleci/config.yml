@@ -67,7 +67,7 @@ jobs:
       - run:
           name: Run the service check command with a config
           command: |
-            export CIRCLECI_API_TOKEN=circleci-token
+            export CIRCLECI_INTEGRATION_TOKEN=circleci-token
             export GITLAB_AUTH_TOKEN=gitlab-token
             java -jar target/gitlab-single-org-connector*.jar \
                  check src/main/resources/default-container-config.yml
@@ -126,7 +126,7 @@ jobs:
           name: Run service check command in container
           command: |
             docker run -it \
-              --env CIRCLECI_API_TOKEN=circleci-token \
+              --env CIRCLECI_INTEGRATION_TOKEN=circleci-token \
               --env GITLAB_AUTH_TOKEN=gitlab-token \
               --rm "$(cat docker.tag)" check /default_config.yml
       - run:

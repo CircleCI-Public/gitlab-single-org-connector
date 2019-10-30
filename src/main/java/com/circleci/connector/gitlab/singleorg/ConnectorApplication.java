@@ -46,7 +46,7 @@ class ConnectorApplication extends Application<ConnectorConfiguration> {
   /** Create and configure a CircleCI client, but don't execute any connections. */
   private DefaultApi circleCiClient(ConnectorConfiguration config) {
     ApiClient apiClient = Configuration.getDefaultApiClient();
-    apiClient.setApiKey(config.getCircleCi().getApiToken());
+    apiClient.setApiKey(config.getCircleCi().getIntegrationToken());
     return new DefaultApi(apiClient);
   }
 
