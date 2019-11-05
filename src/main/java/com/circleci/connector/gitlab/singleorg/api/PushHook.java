@@ -22,7 +22,7 @@ public abstract class PushHook {
   @JsonIgnore
   public UUID id() {
     return UUID.randomUUID();
-  };
+  }
 
   @Value.Derived
   @JsonIgnore
@@ -48,7 +48,7 @@ public abstract class PushHook {
 
   @JsonProperty("user_id")
   @Range(min = 0)
-  abstract int userId();
+  public abstract int userId();
 
   @JsonProperty("user_name")
   @NotEmpty
@@ -57,6 +57,10 @@ public abstract class PushHook {
   @JsonProperty("user_username")
   @NotEmpty
   abstract String userUsername();
+
+  @JsonProperty("user_email")
+  @NotEmpty
+  public abstract String userEmail();
 
   @NotNull
   public abstract Project project();
