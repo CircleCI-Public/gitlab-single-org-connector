@@ -10,7 +10,7 @@
   <properties>
     <circleci.build.number>0-SNAPSHOT</circleci.build.number>
     <dropwizard.version>2.0.0-rc9</dropwizard.version>
-    <jackson.version>2.9.10</jackson.version>
+    <jackson.version>2.10.1</jackson.version>
     <jersey.version>2.29</jersey.version>
     <metrics.statsd.version>4.2.0</metrics.statsd.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
