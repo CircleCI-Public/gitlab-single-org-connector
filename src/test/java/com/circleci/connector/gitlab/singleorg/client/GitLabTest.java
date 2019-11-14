@@ -9,6 +9,7 @@ import com.circleci.connector.gitlab.singleorg.model.ImmutableWorkflow;
 import com.circleci.connector.gitlab.singleorg.model.Pipeline;
 import com.circleci.connector.gitlab.singleorg.model.Workflow;
 import com.circleci.connector.gitlab.singleorg.model.Workflow.State;
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -55,12 +56,12 @@ class GitLabTest {
     return Resources.toString(resource, Charset.defaultCharset());
   }
 
-  private static ObjectNode readCircleCIConfigAsObjectNode(String filename) throws IOException {
+  private static TreeNode readCircleCIConfigAsObjectNode(String filename) throws IOException {
     return readYamlAsObject(readCircleCIConfigAsString(filename));
   }
 
-  private static ObjectNode readYamlAsObject(String yaml) throws IOException {
-    return (ObjectNode) YAML_MAPPER.readTree(yaml);
+  private static TreeNode readYamlAsObject(String yaml) throws IOException {
+    return YAML_MAPPER.readTree(yaml);
   }
 
   @BeforeEach
@@ -90,14 +91,14 @@ class GitLabTest {
 
   @Test
   void extendEmptyCircleCiConfig() throws IOException {
-    ObjectNode expected = readCircleCIConfigAsObjectNode("empty.output.yaml");
+    TreeNode expected = readCircleCIConfigAsObjectNode("empty.output.yaml");
     ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(""));
     assertEquals(expected, result);
   }
 
   @Test
   void extendValidCircleCiConfigWithoutParametersOrCommands() throws IOException {
-    ObjectNode expected = readCircleCIConfigAsObjectNode("valid-simple.output.yaml");
+    TreeNode expected = readCircleCIConfigAsObjectNode("valid-simple.output.yaml");
     String config = readCircleCIConfigAsString("valid-simple.input.yaml");
     ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(config));
     assertEquals(expected, result);
@@ -105,7 +106,7 @@ class GitLabTest {
 
   @Test
   void extendValidCircleCiConfigWithParameters() throws IOException {
-    ObjectNode expected = readCircleCIConfigAsObjectNode("valid-parameters.output.yaml");
+    TreeNode expected = readCircleCIConfigAsObjectNode("valid-parameters.output.yaml");
     String config = readCircleCIConfigAsString("valid-parameters.input.yaml");
     ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(config));
     assertEquals(expected, result);
@@ -113,7 +114,7 @@ class GitLabTest {
 
   @Test
   void extendValidCircleCiConfigWithCommand() throws IOException {
-    ObjectNode expected = readCircleCIConfigAsObjectNode("valid-commands.output.yaml");
+    TreeNode expected = readCircleCIConfigAsObjectNode("valid-commands.output.yaml");
     String config = readCircleCIConfigAsString("valid-commands.input.yaml");
     ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(config));
     assertEquals(expected, result);
