@@ -9,7 +9,6 @@ import com.circleci.connector.gitlab.singleorg.model.ImmutableWorkflow;
 import com.circleci.connector.gitlab.singleorg.model.Pipeline;
 import com.circleci.connector.gitlab.singleorg.model.Workflow;
 import com.circleci.connector.gitlab.singleorg.model.Workflow.State;
-import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -41,11 +40,6 @@ class GitLabTest {
   private CommitsApi mockCommitsApi = Mockito.mock(CommitsApi.class);
   private GitLab gitLab = new GitLab(mockGitLabApi);
 
-  private static Pipeline loadYamlAsPipeline(String filename) throws IOException {
-    URL resource = Resources.getResource(String.format("model/pipeline/%s", filename));
-    return YAML_MAPPER.readValue(resource, Pipeline.class);
-  }
-
   private static CommitStatus loadYamlAsCommitStatus(String filename) throws IOException {
     URL resource = Resources.getResource(String.format("gitlab-api/commit-status/%s", filename));
     return YAML_MAPPER.readValue(resource, CommitStatus.class);
@@ -56,12 +50,12 @@ class GitLabTest {
     return Resources.toString(resource, Charset.defaultCharset());
   }
 
-  private static TreeNode readCircleCIConfigAsObjectNode(String filename) throws IOException {
+  private static ObjectNode readCircleCIConfigAsObjectNode(String filename) throws IOException {
     return readYamlAsObject(readCircleCIConfigAsString(filename));
   }
 
-  private static TreeNode readYamlAsObject(String yaml) throws IOException {
-    return YAML_MAPPER.readTree(yaml);
+  private static ObjectNode readYamlAsObject(String yaml) throws IOException {
+    return (ObjectNode) YAML_MAPPER.readTree(yaml);
   }
 
   @BeforeEach
@@ -90,15 +84,8 @@ class GitLabTest {
   }
 
   @Test
-  void extendEmptyCircleCiConfig() throws IOException {
-    TreeNode expected = readCircleCIConfigAsObjectNode("empty.output.yaml");
-    ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(""));
-    assertEquals(expected, result);
-  }
-
-  @Test
   void extendValidCircleCiConfigWithoutParametersOrCommands() throws IOException {
-    TreeNode expected = readCircleCIConfigAsObjectNode("valid-simple.output.yaml");
+    ObjectNode expected = readCircleCIConfigAsObjectNode("valid-simple.output.yaml");
     String config = readCircleCIConfigAsString("valid-simple.input.yaml");
     ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(config));
     assertEquals(expected, result);
@@ -106,7 +93,7 @@ class GitLabTest {
 
   @Test
   void extendValidCircleCiConfigWithParameters() throws IOException {
-    TreeNode expected = readCircleCIConfigAsObjectNode("valid-parameters.output.yaml");
+    ObjectNode expected = readCircleCIConfigAsObjectNode("valid-parameters.output.yaml");
     String config = readCircleCIConfigAsString("valid-parameters.input.yaml");
     ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(config));
     assertEquals(expected, result);
@@ -114,7 +101,7 @@ class GitLabTest {
 
   @Test
   void extendValidCircleCiConfigWithCommand() throws IOException {
-    TreeNode expected = readCircleCIConfigAsObjectNode("valid-commands.output.yaml");
+    ObjectNode expected = readCircleCIConfigAsObjectNode("valid-commands.output.yaml");
     String config = readCircleCIConfigAsString("valid-commands.input.yaml");
     ObjectNode result = gitLab.extendCircleCiConfig(readYamlAsObject(config));
     assertEquals(expected, result);
@@ -165,6 +152,23 @@ class GitLabTest {
         .thenReturn(readCircleCIConfigAsString("non-object.input.yaml"));
 
     Optional<String> result = gitLab.fetchCircleCiConfig(PROJECT_ID, REF);
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void fetchEmptyYamlError() throws GitLabApiException {
+    RepositoryFile mockRepositoryFile = Mockito.mock(RepositoryFile.class);
+
+    Mockito.when(mockRepositoryFileApi.getFile(PROJECT_ID, GitLab.CIRCLECI_CONFIG_PATH, REF))
+        .thenReturn(mockRepositoryFile);
+    Mockito.when(mockRepositoryFile.getDecodedContentAsString()).thenReturn("");
+
+    Optional<String> result = gitLab.fetchCircleCiConfig(PROJECT_ID, REF);
+    assertTrue(result.isEmpty());
+
+    Mockito.when(mockRepositoryFile.getDecodedContentAsString()).thenReturn("  \n \n");
+
+    result = gitLab.fetchCircleCiConfig(PROJECT_ID, REF);
     assertTrue(result.isEmpty());
   }
 }
