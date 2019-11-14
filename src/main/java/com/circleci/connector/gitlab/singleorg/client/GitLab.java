@@ -4,6 +4,7 @@ import com.circleci.connector.gitlab.singleorg.model.Pipeline;
 import com.circleci.connector.gitlab.singleorg.model.Workflow;
 import com.circleci.connector.gitlab.singleorg.model.Workflow.State;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -96,12 +97,12 @@ public class GitLab {
    * @return The config extended with the git-checkout command and git-related parameters
    */
   @VisibleForTesting
-  ObjectNode extendCircleCiConfig(ObjectNode root) {
+  ObjectNode extendCircleCiConfig(TreeNode root) {
     ObjectNode rootNode;
-    if (root == null) {
+    if (root == null || root.isMissingNode()) {
       rootNode = YAML_MAPPER.createObjectNode();
     } else {
-      rootNode = root;
+      rootNode = (ObjectNode) root;
     }
 
     ObjectNode parametersNode = rootNode.with("parameters");
