@@ -121,6 +121,8 @@ public class CircleCi {
   public Pipeline triggerPipeline(
       Pipeline pipeline,
       String circleCiConfig,
+      String userId,
+      String login,
       String projectSlug,
       String sshFingerprint,
       String gitSshUrl) {
@@ -134,7 +136,7 @@ public class CircleCi {
       params.setRevision(pipeline.revision());
       params.setParameters(
           Map.of("gitlab_ssh_fingerprint", sshFingerprint, "gitlab_git_uri", gitSshUrl));
-      PipelineLight pipelineLight = circleCiApi.triggerPipeline(projectSlug, params);
+      PipelineLight pipelineLight = circleCiApi.triggerPipeline(projectSlug, login, userId, params);
       return ImmutablePipeline.builder().from(pipeline).id(pipelineLight.getId()).build();
     } catch (ApiException e) {
       LOGGER.error("Failed to trigger pipeline", e);

@@ -81,26 +81,30 @@ class CircleCiTest {
     CIRCLECI_WORKFLOW.setStatus(StatusEnum.RUNNING);
 
     try {
-      when(CIRCLECI_HAPPY.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
+      when(CIRCLECI_HAPPY.triggerPipeline(
+              anyString(), anyString(), anyString(), any(TriggerPipelineParameters.class)))
           .thenReturn(PIPELINE_LIGHT);
       when(CIRCLECI_HAPPY.getPipelineById(PIPELINE_ID)).thenReturn(PIPELINE_WITH_WORKFLOWS);
       when(CIRCLECI_HAPPY.getWorkflowById(WORKFLOW_ID)).thenReturn(CIRCLECI_WORKFLOW);
 
-      when(CIRCLECI_404.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
+      when(CIRCLECI_404.triggerPipeline(
+              anyString(), anyString(), anyString(), any(TriggerPipelineParameters.class)))
           .thenThrow(new ApiException(404, "No such project"));
       when(CIRCLECI_404.getPipelineById(any(UUID.class)))
           .thenThrow(new ApiException(404, "No such pipeline"));
       when(CIRCLECI_404.getWorkflowById(any(UUID.class)))
           .thenThrow(new ApiException(404, "No such workflow"));
 
-      when(CIRCLECI_404_JSON.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
+      when(CIRCLECI_404_JSON.triggerPipeline(
+              anyString(), anyString(), anyString(), any(TriggerPipelineParameters.class)))
           .thenThrow(new ApiException(404, "{\"message\":\"No such project\"}"));
       when(CIRCLECI_404_JSON.getPipelineById(any(UUID.class)))
           .thenThrow(new ApiException(404, "{\"message\":\"No such pipeline\"}"));
       when(CIRCLECI_404_JSON.getWorkflowById(any(UUID.class)))
           .thenThrow(new ApiException(404, "{\"message\":\"No such workflow\"}"));
 
-      when(CIRCLECI_500.triggerPipeline(anyString(), any(TriggerPipelineParameters.class)))
+      when(CIRCLECI_500.triggerPipeline(
+              anyString(), anyString(), anyString(), any(TriggerPipelineParameters.class)))
           .thenThrow(new ApiException(500, "CircleCI is broken"));
       when(CIRCLECI_500.getPipelineById(any(UUID.class)))
           .thenThrow(new ApiException(500, "CircleCI is broken"));
@@ -176,7 +180,7 @@ class CircleCiTest {
     CircleCi circleCi = new CircleCi(CIRCLECI_404);
     assertThrows(
         ClientErrorException.class,
-        () -> circleCi.triggerPipeline(PIPELINE_WITHOUT_ID, "", "", "", ""));
+        () -> circleCi.triggerPipeline(PIPELINE_WITHOUT_ID, "", "", "", "", "", ""));
   }
 
   @Test
@@ -184,7 +188,7 @@ class CircleCiTest {
     CircleCi circleCi = new CircleCi(CIRCLECI_404_JSON);
     assertThrows(
         ClientErrorException.class,
-        () -> circleCi.triggerPipeline(PIPELINE_WITHOUT_ID, "", "", "", ""));
+        () -> circleCi.triggerPipeline(PIPELINE_WITHOUT_ID, "", "", "", "", "", ""));
   }
 
   @Test
@@ -192,7 +196,7 @@ class CircleCiTest {
     CircleCi circleCi = new CircleCi(CIRCLECI_500);
     assertThrows(
         RuntimeException.class,
-        () -> circleCi.triggerPipeline(PIPELINE_WITHOUT_ID, "", "", "", ""));
+        () -> circleCi.triggerPipeline(PIPELINE_WITHOUT_ID, "", "", "", "", "", ""));
   }
 
   @Test
@@ -200,13 +204,14 @@ class CircleCiTest {
     CircleCi circleCi = new CircleCi(CIRCLECI_HAPPY);
 
     assertThrows(
-        RuntimeException.class, () -> circleCi.triggerPipeline(PIPELINE_WITH_ID, "", "", "", ""));
+        RuntimeException.class,
+        () -> circleCi.triggerPipeline(PIPELINE_WITH_ID, "", "", "", "", "", ""));
   }
 
   @Test
   void triggerPipelineIfCircleCiReturnsPipelineSuccess() {
     CircleCi circleCi = new CircleCi(CIRCLECI_HAPPY);
-    Pipeline pipeline = circleCi.triggerPipeline(PIPELINE_WITHOUT_ID, "", "", "", "");
+    Pipeline pipeline = circleCi.triggerPipeline(PIPELINE_WITHOUT_ID, "", "", "", "", "", "");
     assertNotNull(pipeline);
     assertEquals(PIPELINE_LIGHT.getId(), pipeline.id());
   }
