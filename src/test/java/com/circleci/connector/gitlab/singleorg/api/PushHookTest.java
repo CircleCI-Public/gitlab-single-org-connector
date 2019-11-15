@@ -23,6 +23,7 @@ class PushHookTest {
     assertEquals(4, hook.userId());
     assertEquals("John Smith", hook.userName());
     assertEquals("jsmith", hook.userUsername());
+    assertEquals("john@example.com", hook.userEmail());
     assertEquals(15, hook.project().id());
     assertEquals("Diaspora", hook.project().name());
     assertEquals("git@example.com:mike/diaspora.git", hook.project().gitSshUrl());

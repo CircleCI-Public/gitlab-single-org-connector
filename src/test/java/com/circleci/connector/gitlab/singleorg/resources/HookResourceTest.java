@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.circleci.connector.gitlab.singleorg.ConnectorConfiguration;
@@ -23,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.ws.rs.WebApplicationException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class HookResourceTest {
@@ -32,11 +35,11 @@ class HookResourceTest {
   private static final ConnectorConfiguration CONFIG_WITH_SECRET;
   private static final String GITLAB_DOCS_HOOK =
       FixtureHelpers.fixture("gitlab-push-hook-from-docs.json");
-  private static final GitLab GITLAB_HAPPY;
-  private static final GitLab GITLAB_SAD;
-  private static final CircleCi CIRCLECI_HAPPY;
-  private static final CircleCi CIRCLECI_SAD;
-  private static final ScheduledExecutorService JOB_RUNNER;
+  private static GitLab GITLAB_HAPPY;
+  private static GitLab GITLAB_SAD;
+  private static CircleCi CIRCLECI_HAPPY;
+  private static CircleCi CIRCLECI_SAD;
+  private static ScheduledExecutorService JOB_RUNNER;
 
   static {
     EMPTY_CONFIG = configFromString("{}");
@@ -63,6 +66,10 @@ class HookResourceTest {
                 + "}"
                 + "}"
                 + "}");
+  }
+
+  @BeforeEach
+  void setUp() {
 
     GITLAB_HAPPY = mock(GitLab.class);
     when(GITLAB_HAPPY.fetchCircleCiConfig(anyInt(), anyString())).thenReturn(Optional.of("config"));
@@ -73,10 +80,22 @@ class HookResourceTest {
     CIRCLECI_HAPPY = mock(CircleCi.class);
     CIRCLECI_SAD = mock(CircleCi.class);
     when(CIRCLECI_HAPPY.triggerPipeline(
-            any(Pipeline.class), anyString(), anyString(), anyString(), anyString()))
+            any(Pipeline.class),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString()))
         .thenReturn(ImmutablePipeline.of(UUID.randomUUID(), 43, "abcd", "master"));
     when(CIRCLECI_SAD.triggerPipeline(
-            any(Pipeline.class), anyString(), anyString(), anyString(), anyString()))
+            any(Pipeline.class),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString()))
         .thenThrow(new RuntimeException("bad things happened"));
 
     JOB_RUNNER = mock(ScheduledExecutorService.class);
@@ -88,6 +107,21 @@ class HookResourceTest {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Test
+  void wePassTheRightArgumentsToTriggerPipelineWhenProcessingHook() throws Exception {
+    HookResource hr = new HookResource(GITLAB_HAPPY, CIRCLECI_HAPPY, JOB_RUNNER, MINIMAL_CONFIG);
+    hr.processHook(GITLAB_DOCS_HOOK, "Push Hook", null);
+    verify(CIRCLECI_HAPPY)
+        .triggerPipeline(
+            any(Pipeline.class),
+            eq("config"),
+            eq("4"),
+            eq("john@example.com"),
+            eq("gh/foo/bar"),
+            eq(""),
+            eq("git@example.com:mike/diaspora.git"));
   }
 
   @Test

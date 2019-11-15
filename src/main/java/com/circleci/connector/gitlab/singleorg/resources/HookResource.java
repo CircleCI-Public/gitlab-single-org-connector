@@ -118,6 +118,8 @@ public class HookResource {
         circleCiClient.triggerPipeline(
             pipeline,
             circleCiConfig.get(),
+            Integer.toString(hook.userId()),
+            hook.userEmail(),
             projectSlug,
             sshFingerprint,
             hook.project().gitSshUrl());
